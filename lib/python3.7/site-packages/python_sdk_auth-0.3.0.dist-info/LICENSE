@@ -1,0 +1,71 @@
+HOLOGRAM PROPRIETARY SOFTWARE LICENSE
+
+
+Website: https://hologram.io
+
+Mailing address: Hologram, Inc. // 2045 W Grand Ave Ste B, PMB #25937 // Chicago, IL 60612-1577
+
+
+Please read this software license agreement ("License") carefully before using the Hologram, Inc. ("Hologram") software. By using the Hologram software, you are agreeing to be bound by the terms of this License. If you do not agree to the terms of this License, you must not use the software.
+
+
+1. General. 
+
+A. Hologram, Inc. ("Hologram") software and documentation, and any third party software and documentation, accompanying this software license agreement ("License") on any media or other form (collectively the "Hologram Software") are licensed, not sold, to you by Hologram for use only under the terms of this License. Hologram and/or Hologram's licensors retain ownership of the Hologram Software itself and reserve all rights that are not expressly granted to you. 
+
+B. Hologram may make available future upgrades or updates to the Hologram Software. Upgrades and updates will not necessarily include all existing software features or new features that Hologram releases. The terms of this License will govern any software upgrades or updates provided by Hologram that replace and/or supplement the original Hologram Software product unless such upgrade or update is accompanied by a separate license, in which case the terms of that license will govern.
+
+C. Use of other services or products of Hologram's may be governed by additional terms. Your use of Hologram Software may cause you and/or your customers to directly or indirectly make use of other services or products of Hologram's. This License does not replace, and is not intended to amend or modify, the terms that govern other services or products of Hologram's including, but not limited to, Hologram's Terms of Use available at the following URL: https://hologram.io/terms-of-use/
+
+
+2. Permitted Uses and Restrictions.
+
+A. Restricted Use. You are granted a limited non-exclusive license to install and use the Hologram Software subject to the terms and conditions of this License.
+
+B. No Reverse Engineering. You may not, and you agree not to or enable others to, copy (except as expressly permitted by this License), decompile, reverse engineer, disassemble, attempt to derive the source code of, decrypt, modify, or create derivative works of the Hologram Software or any services provided by the Hologram Software or any part thereof (except as and only to the extent any foregoing restriction is prohibited by applicable law or by licensing terms governing use of Open Source Components that may be included with the Hologram Software).
+
+C. Open Source Components. Third party open source programs ("Open Source Components") have been or may be made available by Hologram and may be included with the Hologram Software. You may modify or replace only these Open Source Components, provided that: (i) the resultant modified Hologram Software is used, in place of the unmodified Hologram Software, on a single computer or device; and (ii) you otherwise comply with the terms of this License; and (iii) you comply with any applicable licensing terms governing the use of the Open Source Components.
+
+D. Distributing Copies. You may redistribute only unmodified versions of the Hologram Software, which must include all component parts and documentation including this License. Under this License, you may not distribute modified versions or derivative works of any component of the Hologram Software (except as and only to the extent any foregoing restriction is prohibited by applicable law or by licensing terms governing use of Open Source Components that may be included with the Hologram Software). The party receiving a copy of Hologram Software must also agree to accept the terms and conditions of this License.
+
+E. Transfer. You may not rent, lease, lend, or sublicense the Hologram Software. This License, and your rights and obligations hereunder, may not be assigned, subcontracted, delegated or otherwise transferred by you without Hologram's prior written consent, and any attempted assignment, subcontract, delegation, or transfer in violation of the foregoing will be null and void.
+
+
+3. Termination. This License is effective until terminated and your rights under this License will terminate automatically, without notice from Hologram, if you fail to comply with any of this License's terms. You must cease all use of the Hologram Software and destroy all copies of the Hologram Software upon termination of this License (or termination of your rights under this License). Sections 3, 4, 5, 6, 7, 8, 9, 10, and 11 of this License shall survive any such termination.
+
+
+4. Disclaimer of Warranties.
+
+A. Hologram does NOT warrant that (i) services, products, and Hologram Software will meet your specific requirements; (ii) services, products, and Hologram Software will be uninterrupted, timely, secure, or error-free; (iii) the results that may be obtained from the use of services, products, and Hologram Software will be accurate or reliable; (iv) the quality of any services, products, Hologram Software, information, or other material purchased or obtained by you through will meet your expectations; and (v) any errors in the service, products, or Hologram Software will be corrected.
+
+B. Services may be subject to sporadic interruptions and failures for a variety of reasons beyond Hologram's control, including, but not limited to, cellular intermittency, service provider uptime, mobile notifications and carriers, among others. You acknowledge these limitations and agree that Hologram is not responsible for any damages allegedly caused by the failure or delay of the services.
+
+C. You acknowledge that Hologram uses third party service providers to enable aspects of its services, products, and Hologram Software—such as, for example, but not limited to, data storage, synchronization, and communication through third-party servers, and mobile device notifications through mobile operating system vendors and mobile carriers, and that Hologram does not control and is not responsible for the acts or omissions of such third party service providers.
+
+
+5. Limitation of Liability.
+
+A. You expressly understand and agree that neither Hologram nor its suppliers shall be liable for any indirect, incidental, special, consequential or exemplary damages, including but not limited to, damages for loss of profits, goodwill, use, data or other intangible losses (even if Hologram has been advised of the possibility of such damages) resulting from: (i) the cost of procurement for substitute products or services; (ii) the interruption of use or loss or corruption of data; (iii) actions or choices by any third parties using services, products, or Hologram Software; (iv) the interruption of access to or inability to access services; (vi) access, authorized or unauthorized, to your data, or your devices (Hologram products or otherwise) making use of Hologram's services (v) your use of Hologram's services (including the APIs or third party products that access data via the APIs) or products. In no event shall Hologram or its suppliers' aggregate liability to you exceed an amount equal to the amounts paid by you during the six (6) month period immediately preceding the event(s) giving rise to liability hereunder.
+
+B. Force Majeure. Hologram will not be liable for delays in processing or other nonperformance caused by such events as fires, telecommunications failures, utility failures, power failures, equipment failures, labor strife, riots, war, terrorist attack, nonperformance of our vendors or suppliers, acts of God, or other causes over which Hologram has no reasonable control.
+
+
+6. Indemnification. You agree to indemnify, defend and hold Hologram harmless from and against any and all Losses incurred by Hologram in connection with any action, claim or suit arising out of or relating to your breach of this License; your violation of any applicable laws, rules or regulations; any dispute between you and any of your suppliers, vendors, distributors, OEMs, resellers or customers; or your use of products, services, or Hologram Software, including without limitation, your use of products, services, or Hologram Software in a project, product, device or any other item that you sell, pass or give to another person.
+
+
+7. Export Control. You may not use or otherwise export or reexport the Hologram Software except as authorized by United States law and the laws of the jurisdiction(s) in which the Hologram Software was obtained. In particular, but without limitation, the Hologram Software may not be exported or re-exported (a) into any U.S. embargoed countries or (b) to anyone on the U.S. Treasury Department's list of Specially Designated Nationals or the U.S. Department of Commerce Denied Person's List or Entity List or any other restricted party lists. By using the Hologram Software, you represent and warrant that you are not located in any such country or on any such list. You also agree that you will not use the Hologram Software for any purposes prohibited by United States law.
+
+
+8. Government End Users. The Hologram Software and related documentation are "Commercial Items", as that term is defined at 48 C.F.R. §2.101, consisting of "Commercial Computer Software" and "Commercial Computer Software Documentation", as such terms are used in 48 C.F.R. §12.212 or 48 C.F.R. §227.7202, as applicable. Consistent with 48 C.F.R. §12.212 or 48 C.F.R. §227.7202-1 through 227.7202-4, as applicable, the Commercial Computer Software and Commercial Computer Software Documentation are being licensed to U.S. Government end users (a) only as Commercial Items and (b) with only those rights as are granted to all other end users pursuant to the terms and conditions herein. Unpublished-rights are reserved under the copyright laws of the United States.
+
+
+9. Controlling Law and Severability. This License shall be governed by the laws of the State of Delaware, USA, without reference to conflicts of law principles. All claims and disputes arising under or relating to this License are to be settled by binding arbitration in the State of Delaware or another location mutually agreeable by the parties. Any waiver or failure to enforce any provision of this License on one occasion will not be deemed a waiver of any other provision or of such provision on any other occasion. If any portion of this License is held invalid or unenforceable, that portion shall be construed in a manner to reflect, as nearly as possible, the original intention of the parties, and the remaining portions shall remain in full force and effect.
+
+
+10. Complete Agreement. This License constitutes the entire agreement between you and Hologram with respect to the use of the Hologram Software licensed hereunder. This License supersedes and merges all prior discussions between the parties with respect to such subject matter.
+
+
+11. Third Party Notices. Portions of the Hologram Software may utilize or include third party software and other copyrighted material. Acknowledgements, licensing terms and disclaimers for such material are contained in the electronic documentation for the Hologram Software and your use of such material is governed by their applicable terms.
+
+
+

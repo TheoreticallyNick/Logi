@@ -1,0 +1,14 @@
+NOTES ON AWS IOT CORE
+
+Policy documents follow JSON convention. A set of policy actions describe the operations 
+    and resources to which you can grant or deny access:
+    - iot:Connect represents permission to connect to the AWS IoT message broker.
+    - iot:Subscribe represents permission to subscribe to an MQTT topic or topic filter.
+    - iot:GetThingShadow represents permission to get a device's shadow.
+    
+IoT Policies allows control access to the AWS IoT data plane. Each statement contains:
+    - Effect: specifies whether the action is allowed or denied
+    - Action: specifies the action the policy allows or denies
+    - Resource: specifies the resource or resources on which the action is allowed or denied
+    
+
