@@ -12,7 +12,7 @@ Pinout Reference Table:
     "AIN1", "P9_40"
 '''
 
-class FluidLevel:
+class Pressure:
     def __init__(self, ADCpin):
         self.ADCpin = ADCpin
 

@@ -3,11 +3,12 @@
 
 import sys, os
 
-activate_this_file = "/var/lib/cloud9/Logi/bin/activate_this.py"
+#activate_this_file = "/var/lib/cloud9/Logi/bin/activate_this.py"
+activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
 exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
 
 sys.path.append('/home/debian/Desktop/Logi/controls/')
-sys.path.append('/var/lib/cloud9/Logi/controls/')
+#sys.path.append('/var/lib/cloud9/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
@@ -42,7 +43,7 @@ def main():
 
     while True:
         
-        if cycleCnt =! 1:
+        if cycleCnt != 1:
             print("Waking up Logi...")
         
         time.sleep(20)
@@ -172,8 +173,8 @@ def main():
                 output, error = process.communicate()
             
             
-            bashCommand = "sudo rtcwake -u -h " + (sleepTime) + " -m standby"
-            print("@bash: sudo rtcwake -u -h " + (sleepTime) + " -m standby")
+            bashCommand = "sudo rtcwake -u -s " + (sleepTime) + " -m standby"
+            print("@bash: sudo rtcwake -u -s " + (sleepTime) + " -m standby")
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
             output, error = process.communicate()
     
