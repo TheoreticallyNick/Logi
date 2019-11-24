@@ -37,7 +37,7 @@ def main():
     led_red.lightOn()
 
     print("###---------- Logi 2.1 Program Start ----------###")
-    sleepTime = (input("Sleep Time in Hours: "))
+    sleepTime = (input("Sleep Time in Seconds: "))
 
     cycleCnt = 1
 
@@ -46,7 +46,7 @@ def main():
         if cycleCnt != 1:
             print("Waking up Logi...")
         
-        time.sleep(20)
+        time.sleep(15)
         led_red = CommandLED("P8_8")
         led_red.lightOn()
         
@@ -55,6 +55,14 @@ def main():
         print("Connecting to Cellular Network...")
         
         try:
+            radioOffCommand = "sudo hologram modem radio-off -vv"
+            print("@bash: sudo hologram modem radio-off -vv")
+            process = subprocess.Popen(radioOffCommand.split(), stdout=subprocess.PIPE)
+            time.sleep(10)
+            radioOnCommand = "sudo hologram modem radio-on -vv"
+            print("@bash: sudo hologram modem radio-on -vv")
+            process = subprocess.Popen(radioOnCommand.split(), stdout=subprocess.PIPE)
+            time.sleep(10)
             connectCommand = "sudo hologram network connect -vv"
             print("@bash: sudo hologram network connect -vv")
             process = subprocess.Popen(connectCommand.split(), stdout=subprocess.PIPE)
@@ -159,7 +167,7 @@ def main():
             cycleCnt = cycleCnt + 1
             
             time.sleep(5)
-            print("Going to Sleep for %s hours"%(str(sleepTime)))
+            print("Going to Sleep for %s seconds (%.2f hours)"%(str(sleepTime), (sleepTime/3600)))
             
             try:
                 disconnectCommand = "sudo hologram network disconnect -vv"
