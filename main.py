@@ -119,12 +119,20 @@ def main():
         ### Connect to AWS IoT
         print("Connecting to MQTT...")
         time.sleep(10)
-        try:    
-            myAWSIoTMQTTClient.connect()
-            print("--> Successfully Connected")
-        except: 
-            print("ERROR 105: Error connecting to MQTT Client")
-            err = Err + "ERROR 105: Error connecting to MQTT Client; "
+        
+        MQTTcon = None
+        attempts = 0
+        while MQTTcon is None:
+            attempts = 1
+            try:    
+                myAWSIoTMQTTClient.connect()
+                print("--> Successfully Connected")
+                MQTTcon = True
+            except: 
+                print("ERROR 105: Error connecting to MQTT Client - Attempt %i"%(attempt))
+                err = err + "ERROR 105: Error connecting to MQTT Client - Attempts %i; "%(attempt)
+                attempt = attempt + 1
+                pass
     
         ### Start connection light heartbeat
         LED_blu_t = threading.Thread(name='lightLoop', target=lightLoop, args=(led_blu,))
@@ -132,22 +140,8 @@ def main():
     
         #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
         
-        #mqtt_time = int(input("MQTT Frequency: "))
-        
-        
-        #print("Publishing in...")
-        #count_down = 3
-        #while (count_down >= 0):
-            #if count_down != 0:
-                #print(count_down)
-                #count_down = count_down - 1
-                #time.sleep(1)
-            #else:
-                #print("Publishing...")
-                #break
-        
-        try:
-                
+        ### MQTT Message build and publish
+        try: 
             timestamp = time.time()
             timelocal = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime())
             
@@ -167,8 +161,9 @@ def main():
             cycleCnt = cycleCnt + 1
             
             time.sleep(5)
-            print("Going to Sleep for %s seconds (%.2f hours)"%(str(sleepTime), (sleepTime/3600)))
+            print("Going to Sleep for %s seconds"%(str(sleepTime)))
             
+            ### Disconnect from the Network
             try:
                 disconnectCommand = "sudo hologram network disconnect -vv"
                 print("@bash: sudo hologram network disconnect -vv")
@@ -180,7 +175,7 @@ def main():
                 print("ERROR 111: Unable to Disconnect Modem; ")
                 output, error = process.communicate()
             
-            
+            ### Bash Command to Enter Sleep Cycle
             bashCommand = "sudo rtcwake -u -s " + (sleepTime) + " -m standby"
             print("@bash: sudo rtcwake -u -s " + (sleepTime) + " -m standby")
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
@@ -189,6 +184,7 @@ def main():
         except KeyboardInterrupt:
             pass
             
+    ### Turn Off LED and Clean Up GPIO Before Exiting
     LED_blu_t.do_run = False
     LED_blu_t.join()
     led_red.lightOff()
