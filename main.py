@@ -25,6 +25,7 @@ import time
 import subprocess
 from Hologram.Network import Network, Cellular
 from Hologram.HologramCloud import HologramCloud
+from Hologram.CustomCloud import CustomCloud
 
 def lightLoop(lightObj):
     t = threading.currentThread()
@@ -53,24 +54,36 @@ def main():
         err = ""
         
         print("Connecting to Cellular Network...")
+
+        ### Set up Hologram Custom Cloud Object
+        cloud = CustomCloud(None, network='cellular')
         
-        try:
-            radioOffCommand = "sudo hologram modem radio-off -vv"
-            print("@bash: sudo hologram modem radio-off -vv")
-            process = subprocess.Popen(radioOffCommand.split(), stdout=subprocess.PIPE)
-            time.sleep(10)
-            radioOnCommand = "sudo hologram modem radio-on -vv"
-            print("@bash: sudo hologram modem radio-on -vv")
-            process = subprocess.Popen(radioOnCommand.split(), stdout=subprocess.PIPE)
-            time.sleep(10)
-            connectCommand = "sudo hologram network connect -vv"
-            print("@bash: sudo hologram network connect -vv")
-            process = subprocess.Popen(connectCommand.split(), stdout=subprocess.PIPE)
-            time.sleep(20)
-            print("Cellular Network Connection Successful -- PPP Session Started")
-        except:
-            output, error = process.communicate()
+        ### Turn Off Radio
+        res = cloud.network.modem.radio_power(False)
+        if res:
+            print('Modem radio disabled')
+        else:
+            print('Failure to disable radio')
+
+        time.sleep(10)
+
+        ### Turn On Radio
+        res = cloud.network.modem.radio_power(True)
+        if res:
+            print('Modem radio enabled')
+        else:
+            print('Failure to enable radio')
+        
+        time.sleep(10)
+        
+        res = cloud.network.connect()
+        if res:
+            print('PPP session started')
+        else:
+            print('Failed to start PPP')
             print("ERROR 109: Unable to Connect Modem; ")
+
+        time.sleep(20)
     
         ### Turn on power light (red LED)
         
@@ -81,6 +94,7 @@ def main():
         time.tzset()    
         #print("Timezone set to EST")
     
+        
         ### Init AWSIoTMQTTClient
         print("Initializing MQTT Connection Parameters...")
         try:
@@ -98,6 +112,7 @@ def main():
             err = err + "ERROR 101: Error Initializing MQTT Connection Parameters -- Check your Keys; "
             os._exit(1)
     
+        
         ### Init Board I/O
         print("Initialing Board I/O...")
         try: 
@@ -105,8 +120,8 @@ def main():
             #pres   = Pressure("P9_39")
             #temp   = Thermocouple("P9_40")
             lev    = FluidLevel("P9_39")
+            rssi = (cloud.network.signal_strength)
             mpl = MPL3115A2()
-            
             print("--> Successfully Initialized I/O")
         except:
             print("ERROR 103: Error Initializing Board I/O; ")
@@ -121,9 +136,9 @@ def main():
         time.sleep(10)
         
         MQTTcon = None
-        attempts = 0
+        attempt = 0
         while MQTTcon is None:
-            attempts = 1
+            attempt = 1
             try:    
                 myAWSIoTMQTTClient.connect()
                 print("--> Successfully Connected")
@@ -155,7 +170,7 @@ def main():
                 err = err + "ERROR 107: I2C Bus Error; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
     
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             print("Published Message: " + JSONpayload)
             cycleCnt = cycleCnt + 1
@@ -164,16 +179,12 @@ def main():
             print("Going to Sleep for %s seconds"%(str(sleepTime)))
             
             ### Disconnect from the Network
-            try:
-                disconnectCommand = "sudo hologram network disconnect -vv"
-                print("@bash: sudo hologram network disconnect -vv")
-                process = subprocess.Popen(disconnectCommand.split(), stdout=subprocess.PIPE)
-                time.sleep(20)
-                print("Cellular Network Disconnected Successfully")
-            
-            except:
-                print("ERROR 111: Unable to Disconnect Modem; ")
-                output, error = process.communicate()
+            res = cloud.network.disconnect()
+            if res:
+                print('PPP session ended')
+            else:
+                print('Failed to end PPP session')
+                print("ERROR 109: Unable to Connect Modem; ")
             
             ### Bash Command to Enter Sleep Cycle
             bashCommand = "sudo rtcwake -u -s " + (sleepTime) + " -m standby"
