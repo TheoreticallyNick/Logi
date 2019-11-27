@@ -35,7 +35,7 @@ def lightLoop(lightObj):
 
 def buildCloudObject():
     ### Redundancy for Connecting to the Onboard Modem ###
-    print("Connecting to Onboard Modem...")
+    print("Connecting to On-Board Modem...")
     attempts = 1
     err = ""
 
@@ -84,7 +84,7 @@ def connectToCellular(cloud):
     cloud = cloud
 
     while attempts < 4:
-        time.sleep(15)
+        time.sleep(5)
         print("- Cellular Network Connection Attempt %i -"%(attempts))
         result = cloud.network.connect()
         if result == True:
@@ -113,7 +113,6 @@ def connectMQTT(client, cloud):
     cloud = cloud
 
     while attempts < 4:
-        time.sleep(15)
         print("- MQTT Client Connection Attempt %i -"%(attempts))
         result = client.connect()
         if result == True:
@@ -168,10 +167,11 @@ def main():
         os._exit(1)
 
     ### Connect to AWS IoT
-    connectMQTT(myAWSIoTMQTTClient)
+    cloud = connectMQTT(myAWSIoTMQTTClient, cloud)
         
-    while True:    
-        time.sleep(3600)
+    while True:
+        if cycleCnt != 1:     
+            time.sleep(900)
         err = ""
         ### Init Board I/O
         print("Initialing Board I/O...")
