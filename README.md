@@ -26,3 +26,10 @@ keys - contains device specific information for AWS MQTT broker connection
     -> Bone#.public.key  - AWS public key    
 
 ### How To Run ###
+
+### Error List ###
+
+ERROR 101 - Error Initializing MQTT Connection Parameters -- Check your Keys
+ERROR 103 - Error Connecting to MQTT Client
+ERROR 103 - Error Initializing Board I/O
+ERROR 107 - I2C Bus Error
