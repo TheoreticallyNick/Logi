@@ -45,102 +45,139 @@ def buildCloudObject():
         cloud = None
         print("- Modem Connection Attempt %i -"%(attempts))
         time.sleep(10)
+
         try:
             cloud = CustomCloud(None, network='cellular')
             print("--> Successfully found USB Modem")
             break
+        
         except NetworkError:
             print("ERR101: Could not find modem")
-            err = err + "ERR101; "
+            err = err + "E101; "
             print("Soft Rebooting...")
             attempts += 1
             bashCommand = "sudo rtcwake -u -s 5 -m standby"
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
             output, error = process.communicate()
+        
         except SerialError:
             print("ERR103: Could not find usable serial port")
-            err = err + "ERR103; "
-            attempts += 1
-            if attempts > 2:
-                print("Soft Rebooting...")
-                bashCommand = "sudo rtcwake -u -s 5 -m standby"
-                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-                output, error = process.communicate()
-                continue
-            else:
-                print("Disconnecting ALL Sessions")
+            err = err + "E103; "
+
+            if attempts < 2:
+                print("Disconnecting All Sessions...")
                 bashCommand = "sudo hologram network disconnect"
                 process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
                 output, error = process.communicate()
 
+            else:
+                print("Soft Rebooting...")
+                bashCommand = "sudo rtcwake -u -s 5 -m standby"
+                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+                output, error = process.communicate()
+
+        attempts += 1
+
     if attempts >= 4:
         sys.exit("FATAL ERROR: " + err)
     else:           
-        return cloud    
+        return cloud, err    
         
 def connectToCellular(cloud):
     ### Redundancy for Connecting to the Cellular Network ###
+    ### TODO 
     print("Connecting to Cellular Network...")
     attempts = 1
     err = ""
 
-    while attempts < 4:
+    while attempts < 5:
         print("- Cellular Network Connection Attempt %i -"%(attempts))
-        result = cloud.network.connect()
-        '''try:
+        
+        try: 
             result = cloud.network.connect()
+
         except PPPError:
-            print("ERR10X: Existing PPP sessions ongoing")
-            err = err + "ERR10X; "
-            attempts += 1
+            print("ERR105: Could not start a PPP Session -- Other Sessions still open")
+            err = err + "E105; "
             cleanKill(cloud)
-            continue'''
+            cloud , errx = buildCloudObject()
+            err = err + errx
+            time.sleep(10)
+            continue
 
         if result == True:
             print("--> Successfully Connected to Cell Network")
             break
-        else:
-            print("ERR105: Could not create a new PPP Session")
-            err = err + "ERR105; "
-            attempts += 1
-            cloud.network.disconnect()
-            print("Turning Off Radio...")
-            cloud.network.modem.radio_power(False)
-            time.sleep(10)
-            print("Turning On Radio...")
-            cloud.network.modem.radio_power(True)
-            time.sleep(10)
 
-    if attempts >= 3:
+        else:
+            print("ERR107: Could not connect to cellular network")
+            err = err + "E107; "
+            
+            if attempts < 2: 
+                cloud.network.disconnect()
+                print("Resetting Modem...")
+                cloud.network.modem.reset()
+                time.sleep(10)
+            else:
+                print("Soft Rebooting...")
+                bashCommand = "sudo rtcwake -u -s 5 -m standby"
+                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+                output, error = process.communicate()
+                time.sleep(10)
+                cleanKill(cloud)
+                cloud , errx = buildCloudObject()
+                err = err + errx
+                time.sleep(10)
+                continue
+            
+        attempts += 1
+
+    if attempts == 4:
         sys.exit("FATAL ERROR: " + err) 
 
-def connectMQTT(client):
+    return cloud, err
+
+def connectMQTT(client, cloud):
     ### Redundancy for Connecting to MQTT Client ###
     print("Connecting to MQTT...")
     attempts = 1
     err = ""
 
-    while attempts < 4:
+    while attempts < 5:
         print("- MQTT Client Connection Attempt %i -"%(attempts))
         time.sleep(10)
+
         try:
             result = client.connect()
+
         except gaierror:
-            print("ERR111: Failure in DNS Server Name Resolution")
+            print("ERR109: Temporary failure in DNS server name resolution")
+            err = err + "E109; "
+            cleanKill(cloud)
+            time.sleep(30)
+            cloud, errx = buildCloudObject()
+            err = err + errx
+            cloud, errx = connectToCellular(cloud)
+            err = err + errx
+            continue
         
         if result == True:
             print("--> Successfully Connected to MQTT Client")
             break
         else:
-            print("ERR107: Could not Connect to MQTT Client")
-            err = err + "ERR107; "
-            attempts += 1
+            print("ERR111: Could not Connect to MQTT Client")
+            err = err + "E111; "
+        
+        attempts += 1
 
-    if attempts >= 3:
+    if attempts == 4:
         print("FATAL ERROR: " + err)
         os._exit(1)  
 
+    return cloud, err
+
 def initMQTTClient(mqtt):
+    ### Initializes all parameters and keys for the MQTT broker connection
     myAWSIoTMQTTClient = None
     try:
         myAWSIoTMQTTClient = AWSIoTMQTTClient(mqtt.mqttClientId)
@@ -152,47 +189,35 @@ def initMQTTClient(mqtt):
         myCallbackContainer = CallbackContainer(myAWSIoTMQTTClient)
         print("--> Successfully Initialized!")
     except:
-        print("ERR109: Error Initializing MQTT Connection Parameters -- Check your Keys")
+        print("ERR113: Error Initializing MQTT Connection Parameters")
+        err = err + "E113; "
         os._exit(1)
     
     return myAWSIoTMQTTClient
 
 def cleanKill(cloud):
-
+    ### Turns off and destroys all PPP sessions to the cellular network
     cloud.network.disconnect()
-    time.sleep(10)
     cloud.network.modem.radio_power(False)
-    time.sleep(10)
+    time.sleep(3)
     cloud.network.modem.reset()
-    time.sleep(10)
+    time.sleep(5)
 
     for proc in psutil.process_iter():
 
         try:
             pinfo = proc.as_dict(attrs=['pid', 'name'])
-            print(pinfo)
         except:
             raise HologramError('Failed to check for existing PPP sessions')
-
         if 'pppd' in pinfo['name']:
             print('Found existing PPP session on pid: %s' % pinfo['pid'])
             print('Killing pid %s now' % pinfo['pid'])
             psutil.Process(pinfo['pid']).kill()
-            time.sleep(10)
-            psutil.Process(pinfo['pid']).terminate()
-            time.sleep(10)
-            os.kill(pinfo['pid'], signal.SIGTERM)
-            time.sleep(10)
             print(kill_proc_tree(pinfo['pid']))
-
-    for proc in psutil.process_iter():
-        pinfo2 = proc.as_dict(attrs=['pid', 'name'])
-        print(pinfo2)
     
     time.sleep(5)
 
-def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True,
-                   timeout=None, on_terminate=None):
+def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
     """Kill a process tree (including grandchildren) with signal
     "sig" and return a (gone, still_alive) tuple.
     "on_terminate", if specified, is a callabck function which is
@@ -201,12 +226,15 @@ def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True,
     assert pid != os.getpid(), "won't kill myself"
     parent = psutil.Process(pid)
     children = parent.children(recursive=True)
+    
     if include_parent:
         children.append(parent)
+    
     for p in children:
         p.send_signal(sig)
-    gone, alive = psutil.wait_procs(children, timeout=timeout,
-                                    callback=on_terminate)
+    
+    gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+    
     return (gone, alive)
 
 def main():
@@ -228,19 +256,19 @@ def main():
         
     while True:
         try:
-            
-            if cycleCnt != 1:    
-                time.sleep(900)
             err = ""
 
             ### Init Cloud Object
-            cloud = buildCloudObject()
+            cloud, errx = buildCloudObject()
+            err = err + errx
 
             ### Connect to Cellular Network
-            connectToCellular(cloud)
+            cloud, errx = connectToCellular(cloud)
+            err = err + errx
 
             ### Connect to MQTT Client
-            connectMQTT(myAWSIoTMQTTClient)
+            cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
+            err = err + errx
 
             ### Init Board I/O
             print("Initialing Board I/O...")
@@ -252,15 +280,15 @@ def main():
                 mpl     = MPL3115A2()
                 print("--> Successfully Initialized I/O")
             except:
-                print("ERROR 103: Error Initializing Board I/O; ")
-                err = err + "ERROR 103; "
+                print("ERR115: Error Initializing Board I/O; ")
+                err = err + "E115; "
 
             try: 
                 rssi = cloud.network.signal_strength
             except:
-                print("ERROR 1XX: Error getting RSSI Values; ")
+                print("ERR117: Error getting RSSI Values; ")
                 rssi = "err"
-                err = err + "ERROR 10x; "
+                err = err + "E117; "
                 
             ### Turn on blue light
             led_blu = CommandLED("P8_7")
@@ -283,8 +311,8 @@ def main():
                 mplTemp = mpl.read_alt_temp()
 
             except:
-                print("ERROR 107: I2C Bus Error")
-                err = err + "ERROR 107; "
+                print("ERR119: I2C Bus Error")
+                err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
             JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
@@ -295,14 +323,14 @@ def main():
             print("Killing all PPP connections...")
             cleanKill(cloud)
             cloud = None
-            time.sleep(15)
+            time.sleep(5)
             
             ### Bash Command to Enter Sleep Cycle
-            #print("Going to Sleep for %s seconds"%(str(sleepTime)))
-            #bashCommand = "sudo rtcwake -u -s " + (sleepTime) + " -m standby"
-            #print("@bash: sudo rtcwake -u -s " + (sleepTime) + " -m standby")
-            #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            #output, error = process.communicate()
+            print("Going to Sleep for %s seconds"%(str(sleepTime)))
+            bashCommand = "sudo rtcwake -u -s " + (sleepTime) + " -m standby"
+            print("@bash: sudo rtcwake -u -s " + (sleepTime) + " -m standby")
+            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+            output, error = process.communicate()
     
         except KeyboardInterrupt:
             pass
