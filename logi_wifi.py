@@ -242,11 +242,9 @@ def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, o
 
 def main():
 
-    print("###---------- Logi 2.1 Program Start ----------###")
+    print("###---------- Logi Wifi Program Start ----------###")
     sleepTime = (input("Sleep Time in Seconds: "))
     cycleCnt = 1
-    led_red = CommandLED("P8_8")
-    led_red.lightOn()
 
     ### Set timezone
     os.environ['TZ'] = 'US/Eastern'
@@ -260,25 +258,15 @@ def main():
     while True:
         try:
             err = ""
+            time.sleep(90)
+            led_red = CommandLED("P8_8")
+            led_red.lightOn()
 
             ### Connect to MQTT Client
             cloud = None
             cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
             err = err + errx
 
-            ### Init Board I/O
-            print("Initialing Board I/O...")
-            try: 
-                ADC.setup()
-                pres   = Pressure("P9_39")
-                temp   = Thermocouple("P9_40")
-                #lev     = FluidLevel("P9_39")
-                mpl     = MPL3115A2()
-                print("--> Successfully Initialized I/O")
-            except:
-                print("ERR115: Error Initializing Board I/O; ")
-                err = err + "E115; "
-                
             ### Turn on blue light
             led_blu = CommandLED("P8_7")
             led_blu.lightOn()
@@ -286,6 +274,19 @@ def main():
             ### Start connection light heartbeat
             LED_blu_t = threading.Thread(name='lightLoop', target=lightLoop, args=(led_blu,))
             LED_blu_t.start()
+
+            ### Init Board I/O
+            print("Initialing Board I/O...")
+            try: 
+                ADC.setup()
+                pres   = Pressure("P9_39")
+                temp   = Thermocouple("P9_40")
+                lev     = 0 #FluidLevel("P9_39")
+                mpl     = MPL3115A2()
+                print("--> Successfully Initialized I/O")
+            except:
+                print("ERR115: Error Initializing Board I/O; ")
+                err = err + "E115; "            
         
             #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
             
@@ -305,18 +306,25 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "temp_v": %.2f, "pres": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, temp.getVoltage(), pres.getPres(), mplTemp['c'], mplTemp['f'])
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             print("Published Message: " + JSONpayload)
             cycleCnt = cycleCnt + 1
+
+            ### Turn Off LED and Clean Up GPIO Before Exiting
+            LED_blu_t.do_run = False
+            LED_blu_t.join()
+            led_blu.lightOff()
+            led_red.lightOff()
+            GPIO.cleanup()
             
             ### Bash Command to Enter Sleep Cycle
             print("Going to Sleep for %s seconds"%(str(sleepTime)))
-            bashCommand = "sudo rtcwake -u -s " + (sleepTime) + " -m standby"
-            print("@bash: sudo rtcwake -u -s " + (sleepTime) + " -m standby")
+            bashCommand = "sudo rtcwake -u -s " + (str(sleepTime)) + " -m standby"
+            print("@bash: sudo rtcwake -u -s " + (str(sleepTime)) + " -m standby")
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
             output, error = process.communicate()
-            time.sleep(20)
+            
     
         except KeyboardInterrupt:
             pass
@@ -324,7 +332,7 @@ def main():
     ### Turn Off LED and Clean Up GPIO Before Exiting
     LED_blu_t.do_run = False
     LED_blu_t.join()
-    led_red.lightOff()
+    led_blu.lightOff()
     led_red.lightOff()
     
     GPIO.cleanup()
