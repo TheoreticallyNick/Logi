@@ -10,6 +10,7 @@ exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'),
 sys.path.append('/home/debian/Desktop/Logi/controls/')
 #sys.path.append('/var/lib/cloud9/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
+
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
@@ -69,22 +70,11 @@ def buildCloudObject():
         except SerialError:
             print("ERR103: Could not find usable serial port")
             err = err + "E103; "
-
-            if attempts < 2:
-                print("Disconnecting All Sessions...")
-                cleanKill(cloud)
-                time.sleep(15)
-                attempts += 1
-                continue
-
-            else:
-                print("Disconnecting All Sessions...")
-                cleanKill(cloud)
-                print("Soft Rebooting...")
-                rtcWake("5", "standby")
-                time.sleep(15)
-                attempts += 1
-                continue
+            print("Soft Rebooting...")
+            rtcWake("5", "standby")
+            time.sleep(15)
+            attempts += 1
+            continue
 
     print("--> Successfully found USB Modem")           
     return cloud, err    
@@ -279,7 +269,7 @@ def connectMQTT(client, cloud):
             continue
             
         if result == True:
-            print("--> Successfully Connected to MQTT Client")
+            time.sleep(5)
             break
         else:
             print("ERR111: Could not Connect to MQTT Client")
