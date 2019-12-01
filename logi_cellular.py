@@ -13,6 +13,7 @@ sys.path.append('/home/debian/Desktop/keys/')
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+from AWSIoTPythonSDK.exception.AWSIoTExceptions import *
 from LED import CommandLED
 from AD8 import Thermocouple
 from PX3 import Pressure
@@ -25,6 +26,7 @@ import time
 import subprocess
 from socket import gaierror
 import psutil
+from serial import SerialException
 from Hologram.Network import Network, Cellular
 from Hologram.HologramCloud import HologramCloud
 from Hologram.CustomCloud import CustomCloud
@@ -41,10 +43,9 @@ def buildCloudObject():
     attempts = 1
     err = ""
 
-    while attempts < 5:
+    while attempts < 6:
         cloud = None
         print("- Modem Connection Attempt %i -"%(attempts))
-        time.sleep(10)
 
         try:
             cloud = CustomCloud(None, network='cellular')
@@ -59,6 +60,7 @@ def buildCloudObject():
             bashCommand = "sudo rtcwake -u -s 5 -m standby"
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
             output, error = process.communicate()
+            time.sleep(30)
         
         except SerialError:
             print("ERR103: Could not find usable serial port")
@@ -75,10 +77,11 @@ def buildCloudObject():
                 bashCommand = "sudo rtcwake -u -s 5 -m standby"
                 process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
                 output, error = process.communicate()
+                time.sleep(30)
 
         attempts += 1
 
-    if attempts >= 4:
+    if attempts == 5:
         sys.exit("FATAL ERROR: " + err)
     else:           
         return cloud, err    
@@ -89,11 +92,16 @@ def connectToCellular(cloud):
     print("Connecting to Cellular Network...")
     attempts = 1
     err = ""
+    
 
-    while attempts < 5:
+    while attempts < 6:
         print("- Cellular Network Connection Attempt %i -"%(attempts))
         
         try: 
+            cloud.network.modem.radio_power(False)
+            time.sleep(10)
+            cloud.network.modem.radio_power(True)
+            time.sleep(10)
             result = cloud.network.connect()
 
         except PPPError:
@@ -105,6 +113,9 @@ def connectToCellular(cloud):
             time.sleep(10)
             continue
 
+        except SerialException:
+            raise("ERR121: Modem reports readiness but returns no data")
+
         if result == True:
             print("--> Successfully Connected to Cell Network")
             break
@@ -114,10 +125,10 @@ def connectToCellular(cloud):
             err = err + "E107; "
             
             if attempts < 2: 
-                cloud.network.disconnect()
-                print("Resetting Modem...")
-                cloud.network.modem.reset()
-                time.sleep(10)
+                print("Preparing to try again...")
+                cloud.network.modem.radio_power(False)
+                cloud
+                time.sleep(20)
             else:
                 print("Soft Rebooting...")
                 bashCommand = "sudo rtcwake -u -s 5 -m standby"
@@ -132,7 +143,7 @@ def connectToCellular(cloud):
             
         attempts += 1
 
-    if attempts == 4:
+    if attempts == 5:
         sys.exit("FATAL ERROR: " + err) 
 
     return cloud, err
@@ -143,7 +154,7 @@ def connectMQTT(client, cloud):
     attempts = 1
     err = ""
 
-    while attempts < 5:
+    while attempts < 6:
         print("- MQTT Client Connection Attempt %i -"%(attempts))
         time.sleep(10)
 
@@ -160,6 +171,12 @@ def connectMQTT(client, cloud):
             cloud, errx = connectToCellular(cloud)
             err = err + errx
             continue
+
+        except connectTimeoutException:
+            print("ERR121: MQTT client connection timeout")
+            print("Attempting to connect...")
+            time.sleep(15)
+            continue
         
         if result == True:
             print("--> Successfully Connected to MQTT Client")
@@ -170,7 +187,7 @@ def connectMQTT(client, cloud):
         
         attempts += 1
 
-    if attempts == 4:
+    if attempts == 5:
         print("FATAL ERROR: " + err)
         os._exit(1)  
 
@@ -198,10 +215,6 @@ def initMQTTClient(mqtt):
 def cleanKill(cloud):
     ### Turns off and destroys all PPP sessions to the cellular network
     cloud.network.disconnect()
-    cloud.network.modem.radio_power(False)
-    time.sleep(3)
-    cloud.network.modem.reset()
-    time.sleep(5)
 
     for proc in psutil.process_iter():
 
@@ -331,6 +344,7 @@ def main():
             print("@bash: sudo rtcwake -u -s " + (sleepTime) + " -m standby")
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
             output, error = process.communicate()
+            time.sleep(20)
     
         except KeyboardInterrupt:
             pass

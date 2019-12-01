@@ -39,3 +39,4 @@ ERR113 - MQTT parameter initialization error. Unable to find the private authent
 ERR115 - I/O initialization error. Unable to initialize I/O signals.
 ERR117 - RSSI value error. Unable to acquire RSSI value.
 ERR119 - I2C signal error. I2C input signals are either faulted or not detected.
+ERR121 - MQTT Connection Timeout
