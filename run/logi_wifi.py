@@ -3,10 +3,12 @@
 
 import sys, os, signal
 
+#activate_this_file = "/var/lib/cloud9/Logi/bin/activate_this.py"
 activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
 exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
 
 sys.path.append('/home/debian/Desktop/Logi/controls/')
+#sys.path.append('/var/lib/cloud9/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
@@ -28,6 +30,117 @@ def lightLoop(lightObj):
     t = threading.currentThread()
     while getattr(t, "do_run", True):
         lightObj.lightHeart()
+
+def buildCloudObject():
+    ### Redundancy for Connecting to the Onboard Modem ###
+    print("Connecting to On-Board Modem...")
+    attempts = 1
+    err = ""
+
+    while attempts < 6:
+        cloud = None
+        print("- Modem Connection Attempt %i -"%(attempts))
+
+        try:
+            cloud = CustomCloud(None, network='cellular')
+            print("--> Successfully found USB Modem")
+            break
+        
+        except NetworkError:
+            print("ERR101: Could not find modem")
+            err = err + "E101; "
+            print("Soft Rebooting...")
+            attempts += 1
+            bashCommand = "sudo rtcwake -u -s 5 -m standby"
+            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+            output, error = process.communicate()
+            time.sleep(30)
+        
+        except SerialError:
+            print("ERR103: Could not find usable serial port")
+            err = err + "E103; "
+
+            if attempts < 2:
+                print("Disconnecting All Sessions...")
+                bashCommand = "sudo hologram network disconnect"
+                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+                output, error = process.communicate()
+
+            else:
+                print("Soft Rebooting...")
+                bashCommand = "sudo rtcwake -u -s 5 -m standby"
+                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+                output, error = process.communicate()
+                time.sleep(30)
+
+        attempts += 1
+
+    if attempts == 5:
+        sys.exit("FATAL ERROR: " + err)
+    else:           
+        return cloud, err    
+        
+def connectToCellular(cloud):
+    ### Redundancy for Connecting to the Cellular Network ###
+    ### TODO 
+    print("Connecting to Cellular Network...")
+    attempts = 1
+    err = ""
+    
+
+    while attempts < 6:
+        print("- Cellular Network Connection Attempt %i -"%(attempts))
+        
+        try: 
+            cloud.network.modem.radio_power(False)
+            time.sleep(10)
+            cloud.network.modem.radio_power(True)
+            time.sleep(10)
+            result = cloud.network.connect()
+
+        except PPPError:
+            print("ERR105: Could not start a PPP Session -- Other Sessions still open")
+            err = err + "E105; "
+            cleanKill(cloud)
+            cloud , errx = buildCloudObject()
+            err = err + errx
+            time.sleep(10)
+            continue
+
+        except SerialException:
+            raise("ERR121: Modem reports readiness but returns no data")
+
+        if result == True:
+            print("--> Successfully Connected to Cell Network")
+            break
+
+        else:
+            print("ERR107: Could not connect to cellular network")
+            err = err + "E107; "
+            
+            if attempts < 2: 
+                print("Preparing to try again...")
+                cloud.network.modem.radio_power(False)
+                cloud
+                time.sleep(20)
+            else:
+                print("Soft Rebooting...")
+                bashCommand = "sudo rtcwake -u -s 5 -m standby"
+                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+                output, error = process.communicate()
+                time.sleep(10)
+                cleanKill(cloud)
+                cloud , errx = buildCloudObject()
+                err = err + errx
+                time.sleep(10)
+                continue
+            
+        attempts += 1
+
+    if attempts == 5:
+        sys.exit("FATAL ERROR: " + err) 
+
+    return cloud, err
 
 def connectMQTT(client, cloud):
     ### Redundancy for Connecting to MQTT Client ###
@@ -88,6 +201,44 @@ def initMQTTClient(mqtt):
         os._exit(1)
     
     return myAWSIoTMQTTClient
+
+def cleanKill(cloud):
+    ### Turns off and destroys all PPP sessions to the cellular network
+    cloud.network.disconnect()
+
+    for proc in psutil.process_iter():
+
+        try:
+            pinfo = proc.as_dict(attrs=['pid', 'name'])
+        except:
+            raise HologramError('Failed to check for existing PPP sessions')
+        if 'pppd' in pinfo['name']:
+            print('Found existing PPP session on pid: %s' % pinfo['pid'])
+            print('Killing pid %s now' % pinfo['pid'])
+            psutil.Process(pinfo['pid']).kill()
+            print(kill_proc_tree(pinfo['pid']))
+    
+    time.sleep(5)
+
+def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
+    """Kill a process tree (including grandchildren) with signal
+    "sig" and return a (gone, still_alive) tuple.
+    "on_terminate", if specified, is a callabck function which is
+    called as soon as a child terminates.
+    """
+    assert pid != os.getpid(), "won't kill myself"
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    
+    if include_parent:
+        children.append(parent)
+    
+    for p in children:
+        p.send_signal(sig)
+    
+    gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+    
+    return (gone, alive)
 
 def main():
 
