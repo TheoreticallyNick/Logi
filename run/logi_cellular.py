@@ -291,7 +291,16 @@ def connectMQTT(client, cloud):
             err = err + errx
             attempts += 1
             continue
-        
+
+    time.sleep(5)
+    hostname = "google.com"
+    response = os.system("ping -c 1 " + hostname)
+    
+    if response == 0:
+        print("Pinging Successfully...")
+    else:
+        print("Unable to Ping...")  
+
     print("--> Successfully Connected to MQTT Client")
     return cloud, err
 
@@ -389,8 +398,9 @@ def main():
             err = err + errx
 
             ### Connect to MQTT Client
-            cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
-            err = err + errx
+            if cycleCnt == 1:
+                cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
+                err = err + errx
 
             ### Init Board I/O
             print("Initialing Board I/O...")
@@ -437,9 +447,11 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
+            time.sleep(5)
             JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             print("Published Message: " + JSONpayload)
+            time.sleep(5)
             cycleCnt = cycleCnt + 1
             
             print("Killing all PPP connections...")
