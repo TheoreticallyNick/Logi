@@ -452,8 +452,8 @@ def main():
 
             time.sleep(5)
             JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "sleep": %i, "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
-            topic = "logi/devices/" + mqtt.thingName
-            myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
+            
+            myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             print("Published Message: " + JSONpayload)
             time.sleep(5)
             cycleCnt = cycleCnt + 1
