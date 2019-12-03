@@ -369,15 +369,18 @@ def rtcWake(time, mode):
 
 def main():
 
-    print("###---------- Logi 2.1 Program Start ----------###")
+    print("###---------- Logi Cellular v2.0 Program Start ----------###")
+
+    ### Set timezone
+    os.environ['TZ'] = 'US/Eastern'
+    time.tzset() 
+    timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+
+    print("Local Time: " + timelocal)
     sleepTime = (input("Sleep Time in Seconds: "))
     cycleCnt = 1
     led_red = CommandLED("P8_8")
     led_red.lightOn()
-
-    ### Set timezone
-    os.environ['TZ'] = 'US/Eastern'
-    time.tzset()  
     
     ### Init AWSIoTMQTTClient
     print("Initializing MQTT Connection Parameters...")
@@ -448,8 +451,9 @@ def main():
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
             time.sleep(5)
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
-            myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "sleep": %i, "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
+            topic = "logi/devices/" + mqtt.thingName
+            myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
             print("Published Message: " + JSONpayload)
             time.sleep(5)
             cycleCnt = cycleCnt + 1
