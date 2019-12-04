@@ -381,12 +381,12 @@ def main():
     cycleCnt = 1
     led_red = CommandLED("P8_8")
     led_red.lightOn()
-    
-    ### Init AWSIoTMQTTClient
+
+    ### Init MQTT Parameters
     print("Initializing MQTT Connection Parameters...")
     mqtt = ConnectMQTTParams()
     myAWSIoTMQTTClient = initMQTTClient(mqtt)
-        
+            
     while True:
 
         try:
@@ -401,9 +401,8 @@ def main():
             err = err + errx
 
             ### Connect to MQTT Client
-            if cycleCnt == 1:
-                cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
-                err = err + errx
+            cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
+            err = err + errx
 
             ### Init Board I/O
             print("Initialing Board I/O...")
@@ -451,7 +450,7 @@ def main():
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
             time.sleep(5)
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "sleep": %i, "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "sleep": "%s", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
             
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             print("Published Message: " + JSONpayload)
