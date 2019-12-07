@@ -35,7 +35,7 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR101 - Modem USB connection error. Unable to connect to the USB modem - modem and/or USB port are not active.
     ERR103 - Modem serial connection error. Unable to connect to the USB modem - modem or USB serial port is busy and unable to communicate.
     ERR105 - Cellular network connection error. Unable to start a new PPP session. Other PPP sessions currently active. 
-    ERR107 - Cellular network connection error. Unable to start a new PPP session. Cell newtork does not recognize the sim. 
+    ERR107 - Cellular network connection error. Unable to start a new PPP session. Cell network does not recognize the sim. 
     ERR109 - Temporary failure in DNS server name resolution. Unable to connect to the MQTT broker. The MQTT broker may have timed out the access tokens.
     ERR111 - Unable to connnect to the MQTT broker.
     ERR113 - MQTT parameter initialization error. Unable to find the private authentication keys to connect to MQTT broker.

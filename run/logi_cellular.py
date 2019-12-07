@@ -35,6 +35,11 @@ from PX3 import Pressure
 from MPL import MPL3115A2
 from DS1318 import FluidLevel
 
+### TODO:
+#       - Put together an array of the connection function
+#       - Use a pointer function to start from a certain spot in the connection array
+#       - Look into using Docker to create the right virtual machine to run this on 
+
 def lightLoop(lightObj):
     t = threading.currentThread()
     while getattr(t, "do_run", True):
