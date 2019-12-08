@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#Logi v2.1
+#Logi v1.2
 
 import sys, os, signal
 
@@ -21,9 +21,16 @@ import Adafruit_BBIO.GPIO as GPIO
 import Adafruit_BBIO.ADC as ADC
 import threading
 import time
+import logging
 from datetime import datetime
 import subprocess
 from socket import gaierror
+
+### TODO:
+#       - write in the logger function into this script
+#       - Put together an array of the connection function
+#       - Use a pointer function to start from a certain spot in the connection array
+#       - Look into using Docker to create the right virtual machine to run this on 
 
 def lightLoop(lightObj):
     t = threading.currentThread()
@@ -92,7 +99,13 @@ def initMQTTClient(mqtt):
 
 def main():
 
-    print("###---------- Logi Wifi Program Start ----------###")
+    ### Set up the logger
+    logging.basicConfig(filename='logi_runtime.log', filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    logging.getLogger('').addHandler(console)
+
+    logging.info('###---------- Logi Wifi v1.2 Program Start ----------###')
     sleepTime = (input("Sleep Time in Seconds: "))
     cycleCnt = 1
 
@@ -156,9 +169,12 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schema": "mqtt_v1", "cycle": "%s", "error": "%s", "RSSI": "%s", "temp_v": %.2f, "pres": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, str(cycleCnt), err, rssi, temp.getVoltage(), pres.getPres(), mplTemp['c'], mplTemp['f'])
-            myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, pres.getPres(), mplTemp['c'])
+            topic = 'logi/devices/%s'%(mqtt.thingName)
+            myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
+            print("Topic Published: " + topic)
             print("Published Message: " + JSONpayload)
+            
             cycleCnt = cycleCnt + 1
 
             ### Turn Off LED and Clean Up GPIO Before Exiting

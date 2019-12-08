@@ -1,0 +1,13 @@
+{
+    "id": "bone id", 
+    "ts": "unix timestamp", 
+    "ts_l": "local timestamp", 
+    "sleep": "sleep cycle time in seconds", 
+    "cycle": "mqtt cycles completed", 
+    "error": "errors", 
+    "RSSI": "rssi value", 
+    "DS1318_volts": "propane sensor voltage", 
+    "Fluid_per": "propane lvl", 
+    "MPL_c": "temperature in C", 
+    "MPL_f": "temperature in F"
+}

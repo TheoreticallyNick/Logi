@@ -389,9 +389,7 @@ def main():
             LED_blu_t.start()
         
             #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
-            
-            ### MQTT Message build and publish
-            
+
             timestamp = time.time()
             timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
             
@@ -406,9 +404,11 @@ def main():
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
             time.sleep(5)
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "sleep": "%s", "cycle": "%s", "error": "%s", "RSSI": "%s", "DS1318_volts": %.2f, "Fluid_per": %.2f, "MPL_c": %.2f, "MPL_f": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getVoltage(), lev.getLev(), mplTemp['c'], mplTemp['f'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getLev(), mplTemp['c'])
             
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
+            topic = 'logi/devices/%s'%(mqtt.thingName)
+            logging.info('Publish Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
             time.sleep(5)
             cycleCnt = cycleCnt + 1
