@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#Logi v2.1
+#Logi v1.2
 
 import sys, os, signal
 
@@ -360,6 +360,14 @@ def main():
             cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
             err = err + errx
 
+            ### Turn on blue light
+            led_blu = CommandLED("P8_7")
+            led_blu.lightOn()
+
+            ### Start connection light heartbeat
+            LED_blu_t = threading.Thread(name='lightLoop', target=lightLoop, args=(led_blu,))
+            LED_blu_t.start()
+
             ### Init Board I/O
             logging.info('Initialing Board I/O...')
             try: 
@@ -379,14 +387,6 @@ def main():
                 logging.error('ERR117: Error getting RSSI values')
                 rssi = "err"
                 err = err + "E117; "
-                
-            ### Turn on blue light
-            led_blu = CommandLED("P8_7")
-            led_blu.lightOn()
-        
-            ### Start connection light heartbeat
-            LED_blu_t = threading.Thread(name='lightLoop', target=lightLoop, args=(led_blu,))
-            LED_blu_t.start()
         
             #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
 

@@ -28,9 +28,8 @@ from socket import gaierror
 
 ### TODO:
 #       - write in the logger function into this script
-#       - Put together an array of the connection function
-#       - Use a pointer function to start from a certain spot in the connection array
-#       - Look into using Docker to create the right virtual machine to run this on 
+#       - combine main scripts into one main file where connection type (wifi vs cellular) is selected
+
 
 def lightLoop(lightObj):
     t = threading.currentThread()
@@ -97,6 +96,13 @@ def initMQTTClient(mqtt):
     
     return myAWSIoTMQTTClient
 
+def rtcWake(time, mode):
+    
+    logging.warning('Soft Rebooting...')
+    bashCommand = "sudo rtcwake -u -s %s -m %s"%(time, mode)
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+
 def main():
 
     ### Set up the logger
@@ -105,23 +111,30 @@ def main():
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
 
-    logging.info('###---------- Logi Wifi v1.2 Program Start ----------###')
-    sleepTime = (input("Sleep Time in Seconds: "))
-    cycleCnt = 1
+    logging.info('###----------- Logi Wifi v1.2 Program Start -----------###')
 
     ### Set timezone
+    tz = 'EST'
     os.environ['TZ'] = 'US/Eastern'
-    time.tzset()  
-    
-    ### Init AWSIoTMQTTClient
-    print("Initializing MQTT Connection Parameters...")
+    logging.info('Setting timezone to %s...', tz)
+    time.tzset() 
+    timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+
+    ### Set sleep cycle
+    logging.info('Local Time: %s', timelocal)
+    sleepTime = (input("Sleep Time in Seconds: "))
+    logging.info('Sleep cycle set to %s seconds', sleepTime)
+
+    ### Init MQTT Parameters
+    logging.info('Initializing MQTT Connection Parameters...')
     mqtt = ConnectMQTTParams()
     myAWSIoTMQTTClient = initMQTTClient(mqtt)
+
+    cycleCnt = 1
         
     while True:
         try:
             err = ""
-            time.sleep(90)
             led_red = CommandLED("P8_8")
             led_red.lightOn()
 
@@ -138,42 +151,47 @@ def main():
             LED_blu_t = threading.Thread(name='lightLoop', target=lightLoop, args=(led_blu,))
             LED_blu_t.start()
 
+            ### Subscribe to MQTT Topics
+            #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
+
             ### Init Board I/O
-            print("Initialing Board I/O...")
+            logging.info('Initialing Board I/O...')
             try: 
                 ADC.setup()
-                pres   = Pressure("P9_39")
-                temp   = Thermocouple("P9_40")
-                lev     = 0 #FluidLevel("P9_39")
+                lev     = Pressure("P9_39")
                 mpl     = MPL3115A2()
-                print("--> Successfully Initialized I/O")
+                logging.info('--> Successfully Initialized I/O')
             except:
-                print("ERR115: Error Initializing Board I/O; ")
-                err = err + "E115; "            
-        
-            #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
-            
-            ### MQTT Message build and publish
-            
+                logging.error('ERR115: Error initializing board I/O')
+                err = err + "E115; "
+
+            try: 
+                rssi = 100
+            except:
+                logging.error('ERR117: Error getting RSSI values')
+                rssi = "err"
+                err = err + "E117; "
+
+            ### Pull the Timestamp    
             timestamp = time.time()
-            timelocal = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
             
+            ### Pull the Temperature Value from MPL
             try:
                 mpl.control_alt_config()
                 mpl.data_config()
                 mplTemp = mpl.read_alt_temp()
-                rssi = "null"
-
             except:
-                print("ERR119: I2C Bus Error")
+                logging.error('ERR119: I2C bus error')
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, pres.getPres(), mplTemp['c'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getLev(), mplTemp['c'])
+            
+            myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             topic = 'logi/devices/%s'%(mqtt.thingName)
-            myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
-            print("Topic Published: " + topic)
-            print("Published Message: " + JSONpayload)
+            logging.info('Publish Topic: %s', topic)
+            logging.info('Published Message: %s', JSONpayload)            
             
             cycleCnt = cycleCnt + 1
 
@@ -185,13 +203,10 @@ def main():
             GPIO.cleanup()
             
             ### Bash Command to Enter Sleep Cycle
-            print("Going to Sleep for %s seconds"%(str(sleepTime)))
-            bashCommand = "sudo rtcwake -u -s " + (str(sleepTime)) + " -m standby"
-            print("@bash: sudo rtcwake -u -s " + (str(sleepTime)) + " -m standby")
-            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            output, error = process.communicate()
+            logging.info('Going to Sleep for %s seconds', str(sleepTime))
+            rtcWake(str(sleepTime), "standby")
+            time.sleep(20)
             
-    
         except KeyboardInterrupt:
             pass
             
