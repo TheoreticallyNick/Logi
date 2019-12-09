@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#Logi v1.2
 
 import sys, os, signal
 
@@ -320,7 +319,7 @@ def main():
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
 
-    logging.info('###---------- Logi Cellular v2.0 Program Start ----------###')
+    logging.info('###---------- Logi Cellular Program Start ----------###')
 
     ### Set timezone
     tz = 'EST'
@@ -344,6 +343,8 @@ def main():
     while True:
 
         try:
+            ### Start cycle
+            logging.info('Starting Cycle Number: %i', cycleCnt)
             err = ""
             led_red = CommandLED("P8_8")
             led_red.lightOn()
@@ -372,8 +373,6 @@ def main():
             logging.info('Initialing Board I/O...')
             try: 
                 ADC.setup()
-                #pres   = Pressure("P9_39")
-                #temp   = Thermocouple("P9_40")
                 lev     = FluidLevel("P9_39")
                 mpl     = MPL3115A2()
                 logging.info('--> Successfully Initialized I/O')
@@ -381,6 +380,7 @@ def main():
                 logging.error('ERR115: Error initializing board I/O')
                 err = err + "E115; "
 
+            ### Record the RSSI
             try: 
                 rssi = cloud.network.signal_strength
             except:
@@ -388,11 +388,14 @@ def main():
                 rssi = "err"
                 err = err + "E117; "
         
+            ### Subscribe to MQTT Topics
             #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
 
+            ### Timestamp 
             timestamp = time.time()
             timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
             
+            ### Get Temperature Data from MPL
             try:
                 mpl.control_alt_config()
                 mpl.data_config()
@@ -403,9 +406,11 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            time.sleep(5)
+
+            ### Set the MQTT Message
             JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getLev(), mplTemp['c'])
             
+            ### Publish to MQTT Broker
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             topic = 'logi/devices/%s'%(mqtt.thingName)
             logging.info('Publish Topic: %s', topic)
@@ -413,11 +418,13 @@ def main():
             time.sleep(5)
             cycleCnt = cycleCnt + 1
             
+            ### Kill all open PPP connections and processes
             logging.info('Killing all PPP connections...')
             cleanKill(cloud)
             cloud = None
             time.sleep(5)
             
+            ### Cycle LED's to OFF
             LED_blu_t.do_run = False
             LED_blu_t.join()
             led_blu.lightOff()

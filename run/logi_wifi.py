@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#Logi v1.2
 
 import sys, os, signal
 
@@ -16,6 +15,7 @@ from LED import CommandLED
 from AD8 import Thermocouple
 from PX3 import Pressure
 from MPL import MPL3115A2
+from socket import gaierror
 from DS1318 import FluidLevel
 import Adafruit_BBIO.GPIO as GPIO
 import Adafruit_BBIO.ADC as ADC
@@ -38,48 +38,55 @@ def lightLoop(lightObj):
 
 def connectMQTT(client, cloud):
     ### Redundancy for Connecting to MQTT Client ###
-    print("Connecting to MQTT...")
+    logging.info('Connecting to MQTT...')
     attempts = 1
     err = ""
 
-    while attempts < 6:
-        print("- MQTT Client Connection Attempt %i -"%(attempts))
-        time.sleep(10)
+    while attempts <= 4:
+        logging.info('- MQTT Client Connection Attempt %i -', attempts)
+
+        if attempts == 4:
+            logging.critical('FATAL ERROR: %s', err)
+            logging.critical('3 attempts made to connect to MQTT Client')
+            os._exit(1) 
 
         try:
             result = client.connect()
 
         except gaierror:
-            print("ERR109: Temporary failure in DNS server name resolution")
+            logging.error('ERR109: Temporary failure in DNS server name resolution')
             err = err + "E109; "
-            time.sleep(30)
+            rtcWake("5", "standby")
+            time.sleep(15)
+            attempts += 1
             continue
 
         except connectTimeoutException:
-            print("ERR121: MQTT client connection timeout")
+            logging.error('ERR121: MQTT client connection timeout')
             err = err + "E121; "
-            time.sleep(30)
+            rtcWake("5", "standby")
+            time.sleep(15)
+            attempts += 1
             continue
-        
+            
         if result == True:
-            print("--> Successfully Connected to MQTT Client")
+            time.sleep(5)
             break
         else:
-            print("ERR111: Could not Connect to MQTT Client")
+            logging.error('ERR111: Could not Connect to MQTT Client')
             err = err + "E111; "
-            time.sleep(30)
-        
-        attempts += 1
+            rtcWake("5", "standby")
+            time.sleep(15)
+            attempts += 1
+            continue
 
-    if attempts == 5:
-        print("FATAL ERROR: " + err)
-        os._exit(1)  
-
+    logging.info('--> Successfully Connected to MQTT Client')
     return cloud, err
 
 def initMQTTClient(mqtt):
     ### Initializes all parameters and keys for the MQTT broker connection
     myAWSIoTMQTTClient = None
+
     try:
         myAWSIoTMQTTClient = AWSIoTMQTTClient(mqtt.mqttClientId)
         myAWSIoTMQTTClient.configureEndpoint(mqtt.host, mqtt.port)
@@ -88,10 +95,10 @@ def initMQTTClient(mqtt):
         myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
         myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
         myCallbackContainer = CallbackContainer(myAWSIoTMQTTClient)
-        print("--> Successfully Initialized!")
+        logging.info('--> Successfully Initialized!')
+
     except:
-        print("ERR113: Error Initializing MQTT Connection Parameters")
-        err = err + "E113; "
+        logging.error('ERR113: Error Initializing MQTT Connection Parameters')
         os._exit(1)
     
     return myAWSIoTMQTTClient
@@ -111,7 +118,7 @@ def main():
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
 
-    logging.info('###----------- Logi Wifi v1.2 Program Start -----------###')
+    logging.info('###----------- Logi Wifi Program Start -----------###')
 
     ### Set timezone
     tz = 'EST'
@@ -164,13 +171,6 @@ def main():
             except:
                 logging.error('ERR115: Error initializing board I/O')
                 err = err + "E115; "
-
-            try: 
-                rssi = 100
-            except:
-                logging.error('ERR117: Error getting RSSI values')
-                rssi = "err"
-                err = err + "E117; "
 
             ### Pull the Timestamp    
             timestamp = time.time()
