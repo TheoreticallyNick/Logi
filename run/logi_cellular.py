@@ -408,12 +408,12 @@ def main():
 
 
             ### Set the MQTT Message
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getLev(), mplTemp['c'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "bat": "bat, "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getLev(), mplTemp['c'])
             
             ### Publish to MQTT Broker
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             topic = 'logi/devices/%s'%(mqtt.thingName)
-            logging.info('Publish Topic: %s', topic)
+            logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
             time.sleep(5)
             cycleCnt = cycleCnt + 1

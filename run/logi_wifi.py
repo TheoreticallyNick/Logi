@@ -2,6 +2,7 @@
 
 import sys, os, signal
 
+sys.path.append('/home/debian/Desktop/Logi/controls/')
 activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
 exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
 
@@ -25,11 +26,6 @@ import logging
 from datetime import datetime
 import subprocess
 from socket import gaierror
-
-### TODO:
-#       - write in the logger function into this script
-#       - combine main scripts into one main file where connection type (wifi vs cellular) is selected
-
 
 def lightLoop(lightObj):
     t = threading.currentThread()
@@ -186,11 +182,11 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "%s", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, rssi, lev.getLev(), mplTemp['c'])
+            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "wifi", "bat": "bat", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, lev.getPres(), mplTemp['c'])
             
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             topic = 'logi/devices/%s'%(mqtt.thingName)
-            logging.info('Publish Topic: %s', topic)
+            logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)            
             
             cycleCnt = cycleCnt + 1
