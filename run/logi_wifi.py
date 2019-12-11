@@ -182,7 +182,13 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            JSONpayload = '{"id": "%s", "ts": "%s", "ts_l": "%s", "schem": "1.2", "slp": "%s", "cyc": "%s", "err": "%s", "rssi": "wifi", "bat": "bat", "lvl": %.2f, "temp": %.2f}'%(mqtt.thingName, timestamp, timelocal, sleepTime, str(cycleCnt), err, lev.getPres(), mplTemp['c'])
+            bat_lvl = 95
+            
+            JSONpayload = json.dump(
+                {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
+                'schem': schema, 'slp': sleepTime, 'cyc': str(cycleCnt), 'err': err, 
+                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']}, 
+                indent=4)
             
             myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
             topic = 'logi/devices/%s'%(mqtt.thingName)
