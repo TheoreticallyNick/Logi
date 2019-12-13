@@ -33,6 +33,9 @@ from AD8 import Thermocouple
 from PX3 import Pressure
 from MPL import MPL3115A2
 from DS1318 import FluidLevel
+from datetime import datetime, timedelta
+from threading import Timer
+from itertools import cycle
 
 ### TODO:
 #       - Put together an array of the connection function
@@ -40,11 +43,23 @@ from DS1318 import FluidLevel
 #       - Look into using Docker to create the right virtual machine to run this on 
 #       - Check out pyenv and pipenv and json.dump
 #       - Using dict() and **kwargs to setup the mqtt message
+#       - Select number of wakes per day, and at what time
+#       - Determine appropriate tunnel time window
+#       - Date based log
 
 def lightLoop(lightObj):
     t = threading.currentThread()
     while getattr(t, "do_run", True):
         lightObj.lightHeart()
+
+def sleepTimeCalc(hr):
+
+    now = datetime.today()
+    nxt = x.replace(day=now.day, hour=hr, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    dt = nxt - now
+    sec = dt.total_seconds()
+
+    return sec
 
 def buildCloudObject():
     ### Redundancy for Connecting to the Onboard Modem ###
@@ -59,7 +74,9 @@ def buildCloudObject():
         if attempts == 4:
             logging.critical('FATAL ERROR: %s', err)
             logging.critical('3 attempts made to connect to MQTT Client')
-            os._exit(1)  
+            rtcWake("100", "standby")
+            attempts = 0
+            continue
 
         try:
             cloud = CustomCloud(None, network='cellular')
@@ -96,6 +113,7 @@ def connectToCellular(cloud):
         if attempts == 4:
             logging.critical('FATAL ERROR: %s', err)
             logging.critical('3 attempts made to connect to MQTT Client')
+            logging.critical('Skippping MQTT Cycle')
             os._exit(1)  
         
         try: 
@@ -315,25 +333,33 @@ def antennaCycle(cloud):
 
 def main():
 
+    ### Set timezone
+    tz = 'EST'
+    os.environ['TZ'] = 'US/Eastern'
+    time.tzset() 
+    timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+
     ### Set up the logger
-    logging.basicConfig(filename='logi_runtime.log', filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
+    logi_log = str(time.asctime(time.localtime())) + "logiLog.log"
+    logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
 
+    ### Start the program
     logging.info('###---------- Logi Cellular Program Start ----------###')
 
-    ### Set timezone
-    tz = 'EST'
-    os.environ['TZ'] = 'US/Eastern'
-    logging.info('Setting timezone to %s...', tz)
-    time.tzset() 
-    timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
-
-    ### Set sleep cycle
+    ### Set sleep schedule
     logging.info('Local Time: %s', timelocal)
-    sleepTime = (input("Sleep Time in Seconds: "))
-    logging.info('Sleep cycle set to %s seconds', sleepTime)
+    sched = []      # empty schedule list
+    n = (input("Number of publishes per day: "))
+
+    for i in range(0,n):
+        w = int(input("Publish time %i: "%(i)))
+        sched.append(w)     # append time to list       
+
+    sched = [8, 20]
+    sched_cycle = cycle(sched)
 
     ### Init MQTT Parameters
     logging.info('Initializing MQTT Connection Parameters...')
@@ -440,8 +466,10 @@ def main():
             led_red.lightOff()
             GPIO.cleanup()
 
+            sleepTime = sleepTimeCalc(next(sched_cycle)))
+
             ### Bash Command to Enter Sleep Cycle
-            logging.info('Going to Sleep for %s seconds', str(sleepTime))
+            logging.info('Going to Sleep until %s', str(sleepTime))
             rtcWake(str(sleepTime), "standby")
             time.sleep(20)
     
