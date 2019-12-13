@@ -358,7 +358,7 @@ def main():
         w = int(input("Publish time %i: "%(i)))
         sched.append(w)     # append time to list       
 
-    sched = [8, 20]
+    print(sched)
     sched_cycle = cycle(sched)
 
     ### Init MQTT Parameters
