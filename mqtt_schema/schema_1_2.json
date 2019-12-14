@@ -3,7 +3,7 @@
     "ts": "unix timestamp", 
     "ts_l": "local timestamp", 
     "schem": "mqtt schema version",
-    "slp": "sleep cycle time in seconds", 
+    "wake": "next wake up time in seconds", 
     "cyc": "mqtt cycles completed", 
     "err": "errors", 
     "rssi": "rssi value",
