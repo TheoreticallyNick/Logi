@@ -2,11 +2,10 @@
 
 import sys, os, signal
 
-#activate_this_file = "/var/lib/cloud9/Logi/bin/activate_this.py"
-#activate_this_file = "/Logi/bin/activate_this.py"
-#exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
+activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
+exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
 
-#sys.path.append('/home/debian/Desktop/Logi/controls/')
+sys.path.append('/home/debian/Desktop/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
 
 import threading
@@ -60,7 +59,7 @@ def time_convert(time_str):
 
 def sleep_calc(time_str):
 
-    hr, mn = stringTimeConvert(time_str)
+    hr, mn = time_convert(time_str)
 
     now = datetime.today()
     nxt = now.replace(day=now.day, hour=hr, minute=mn, second=0, microsecond=0) + timedelta(days=1)
