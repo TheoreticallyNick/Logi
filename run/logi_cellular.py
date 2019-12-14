@@ -3,11 +3,10 @@
 import sys, os, signal
 
 #activate_this_file = "/var/lib/cloud9/Logi/bin/activate_this.py"
-activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
-exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
+#activate_this_file = "/Logi/bin/activate_this.py"
+#exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
 
-sys.path.append('/home/debian/Desktop/Logi/controls/')
-#sys.path.append('/var/lib/cloud9/Logi/controls/')
+#sys.path.append('/home/debian/Desktop/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
 
 import threading
@@ -47,21 +46,30 @@ from itertools import cycle
 #       - Determine appropriate tunnel time window
 #       - Date based log
 
-def lightLoop(lightObj):
+def light_loop(lightObj):
     t = threading.currentThread()
     while getattr(t, "do_run", True):
         lightObj.lightHeart()
 
-def sleepTimeCalc(hr):
+def time_convert(time_str):
+
+    hr = int(time_str[0:2])
+    mn = int(time_str[2:])
+    
+    return hr, mn
+
+def sleep_calc(time_str):
+
+    hr, mn = stringTimeConvert(time_str)
 
     now = datetime.today()
-    nxt = x.replace(day=now.day, hour=hr, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    nxt = now.replace(day=now.day, hour=hr, minute=mn, second=0, microsecond=0) + timedelta(days=1)
     dt = nxt - now
     sec = dt.total_seconds()
 
     return sec
 
-def buildCloudObject():
+def build_cloud_obj():
     ### Redundancy for Connecting to the Onboard Modem ###
     logging.info('Connecting to on-board modem and building new cloud object...')
     attempts = 1
@@ -334,7 +342,6 @@ def antennaCycle(cloud):
 def main():
 
     ### Set timezone
-    tz = 'EST'
     os.environ['TZ'] = 'US/Eastern'
     time.tzset() 
     timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
@@ -355,7 +362,7 @@ def main():
     n = (input("Number of publishes per day: "))
 
     for i in range(0,n):
-        w = int(input("Publish time %i: "%(i)))
+        w = input("Publish time %i: "%(i+1))
         sched.append(w)     # append time to list       
 
     print(sched)
@@ -466,10 +473,11 @@ def main():
             led_red.lightOff()
             GPIO.cleanup()
 
-            sleepTime = sleepTimeCalc(next(sched_cycle)))
+            wake_time = (next(sched_cycle))
+            sleepTime = sleepTimeCalc(wake_time)
 
             ### Bash Command to Enter Sleep Cycle
-            logging.info('Going to Sleep until %s', str(sleepTime))
+            logging.info('Going to Sleep until %s', str(wake_time))
             rtcWake(str(sleepTime), "standby")
             time.sleep(20)
     
