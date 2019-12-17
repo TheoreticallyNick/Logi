@@ -26,13 +26,17 @@ import logging
 from datetime import datetime
 import subprocess
 from socket import gaierror
+from itertools import cycle
+import json
 
-def lightLoop(lightObj):
+schema = 'schema_1_2'
+
+def light_loop(lightObj):
     t = threading.currentThread()
     while getattr(t, "do_run", True):
         lightObj.lightHeart()
 
-def connectMQTT(client, cloud):
+def connect_mqtt(client, cloud):
     ### Redundancy for Connecting to MQTT Client ###
     logging.info('Connecting to MQTT...')
     attempts = 1
@@ -52,7 +56,7 @@ def connectMQTT(client, cloud):
         except gaierror:
             logging.error('ERR109: Temporary failure in DNS server name resolution')
             err = err + "E109; "
-            rtcWake("5", "standby")
+            rtc_wake("5", "standby")
             time.sleep(15)
             attempts += 1
             continue
@@ -60,7 +64,7 @@ def connectMQTT(client, cloud):
         except connectTimeoutException:
             logging.error('ERR121: MQTT client connection timeout')
             err = err + "E121; "
-            rtcWake("5", "standby")
+            rtc_wake("5", "standby")
             time.sleep(15)
             attempts += 1
             continue
@@ -71,7 +75,7 @@ def connectMQTT(client, cloud):
         else:
             logging.error('ERR111: Could not Connect to MQTT Client')
             err = err + "E111; "
-            rtcWake("5", "standby")
+            rtc_wake("5", "standby")
             time.sleep(15)
             attempts += 1
             continue
@@ -79,7 +83,7 @@ def connectMQTT(client, cloud):
     logging.info('--> Successfully Connected to MQTT Client')
     return cloud, err
 
-def initMQTTClient(mqtt):
+def init_mqtt(mqtt):
     ### Initializes all parameters and keys for the MQTT broker connection
     myAWSIoTMQTTClient = None
 
@@ -99,7 +103,7 @@ def initMQTTClient(mqtt):
     
     return myAWSIoTMQTTClient
 
-def rtcWake(time, mode):
+def rtc_wake(time, mode):
     
     logging.warning('Soft Rebooting...')
     bashCommand = "sudo rtcwake -u -s %s -m %s"%(time, mode)
@@ -108,30 +112,39 @@ def rtcWake(time, mode):
 
 def main():
 
+    ### Set timezone
+    os.environ['TZ'] = 'US/Eastern'
+    time.tzset()
+    timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+
     ### Set up the logger
-    logging.basicConfig(filename='logi_runtime.log', filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
+    logi_log = str(time.asctime(time.localtime())) + "logiLog.log"
+    logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
 
     logging.info('###----------- Logi Wifi Program Start -----------###')
 
-    ### Set timezone
-    tz = 'EST'
-    os.environ['TZ'] = 'US/Eastern'
-    logging.info('Setting timezone to %s...', tz)
-    time.tzset() 
-    timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
-
-    ### Set sleep cycle
+     ### Set sleep schedule
     logging.info('Local Time: %s', timelocal)
-    sleepTime = (input("Sleep Time in Seconds: "))
-    logging.info('Sleep cycle set to %s seconds', sleepTime)
+    sched = []      # empty schedule list
+    n = int(input("Number of publishes per day: "))
+
+    for i in range(0,n):
+        w = input("Publish time %i: "%(i+1))
+        sched.append(w)     # append time to list       
+
+    print(sched)
+    sched_cycle = cycle(sched)
+
+    global wake_time 
+    wake_time = sched[1]
 
     ### Init MQTT Parameters
     logging.info('Initializing MQTT Connection Parameters...')
     mqtt = ConnectMQTTParams()
-    myAWSIoTMQTTClient = initMQTTClient(mqtt)
+    myAWSIoTMQTTClient = init_mqtt(mqtt)
 
     cycleCnt = 1
         
@@ -143,7 +156,7 @@ def main():
 
             ### Connect to MQTT Client
             cloud = None
-            cloud, errx = connectMQTT(myAWSIoTMQTTClient, cloud)
+            cloud, errx = connect_mqtt(myAWSIoTMQTTClient, cloud)
             err = err + errx
 
             ### Turn on blue light
@@ -183,19 +196,28 @@ def main():
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
             bat_lvl = 95
+
+            wake_time = (next(sched_cycle))
+
+            rssi = "null"
             
-            JSONpayload = json.dump(
+            JSONpayload = json.dumps(
                 {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                'schem': schema, 'slp': sleepTime, 'cyc': str(cycleCnt), 'err': err, 
-                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']}, 
-                indent=4)
+                'schem': schema, 'wake': wake_time, 'cyc': str(cycleCnt), 'err': err, 
+                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
             
-            myAWSIoTMQTTClient.publish("topic/devices/data", JSONpayload, 0)
+            ### Publish to MQTT Broker
             topic = 'logi/devices/%s'%(mqtt.thingName)
             logging.info('Topic: %s', topic)
-            logging.info('Published Message: %s', JSONpayload)            
-            
+            logging.info('Published Message: %s', JSONpayload)
+            myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
             cycleCnt = cycleCnt + 1
+            
+            ### Kill all open PPP connections and processes
+            logging.info('Killing all PPP connections...')
+            clean_kill(cloud)
+            cloud = None
+            time.sleep(5)
 
             ### Turn Off LED and Clean Up GPIO Before Exiting
             LED_blu_t.do_run = False
@@ -205,8 +227,8 @@ def main():
             GPIO.cleanup()
             
             ### Bash Command to Enter Sleep Cycle
-            logging.info('Going to Sleep for %s seconds', str(sleepTime))
-            rtcWake(str(sleepTime), "standby")
+            logging.info('Going to Sleep for %s seconds', str(sleep_time))
+            rtc_wake(str(sleep_time), "standby")
             time.sleep(20)
             
         except KeyboardInterrupt:

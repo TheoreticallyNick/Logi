@@ -40,13 +40,8 @@ schema = 'schema_1_2'
 
 ### TODO:
 #       - Put together an array of the connection function
-#       - Use a pointer function to start from a certain spot in the connection array
 #       - Look into using Docker to create the right virtual machine to run this on 
-#       - Check out pyenv and pipenv and json.dump
-#       - Using dict() and **kwargs to setup the mqtt message
-#       - Select number of wakes per day, and at what time
 #       - Determine appropriate tunnel time window
-#       - Date based log
 
 def light_loop(lightObj):
     t = threading.currentThread()

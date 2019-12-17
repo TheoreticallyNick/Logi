@@ -211,8 +211,10 @@ Notes:
     - use the following commands to install python 3.7 on the beaglebone
     1) Flash the Beaglebone Black with the latest Debian image from here (version 9.9 as I’m writing this): https://beagleboard.org/latest-images 1
         ssh into your beaglebone and login
-    2) enter command: sudo apt get updates
-    3) remove all of python3.5 using command: sudo apt-get remove python3 – the BBB’s Debian image comes with both python 2.7 and python 3.5, both of which will not work with Hologram’s SDK. You must delete python3.5 prior to installing python3.7 to avoid pip install from installing packages in the wrong python directory.
+    2) enter command: sudo apt-get update
+    3) remove all of python3.5 using command: sudo apt-get remove python3 – 
+        the BBB’s Debian image comes with both python 2.7 and python 3.5, both of which will not work with Hologram’s SDK. 
+        You must delete python3.5 prior to installing python3.7 to avoid pip install from installing packages in the wrong python directory.
     4) install python 3.7 using the instructions here: https://linuxize.com/post/how-to-install-python-3-7-on-debian-9/ 3
     5) as a precaution, I also removed every file and directory related to python3.5 in the /usr/bin/ and /usr/local/lib directories
     6) enter command: python3 -m pip install hologram-python
