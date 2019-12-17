@@ -212,12 +212,6 @@ def main():
             logging.info('Published Message: %s', JSONpayload)
             myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
             cycleCnt = cycleCnt + 1
-            
-            ### Kill all open PPP connections and processes
-            logging.info('Killing all PPP connections...')
-            clean_kill(cloud)
-            cloud = None
-            time.sleep(5)
 
             ### Turn Off LED and Clean Up GPIO Before Exiting
             LED_blu_t.do_run = False
@@ -227,7 +221,9 @@ def main():
             GPIO.cleanup()
             
             ### Bash Command to Enter Sleep Cycle
-            logging.info('Going to Sleep for %s seconds', str(sleep_time))
+            logging.info('Wake up time: %s', wake_time)
+            sleep_time = sleep_calc(wake_time)
+            logging.info('Sleep time in sec: %s', str(sleep_time))
             rtc_wake(str(sleep_time), "standby")
             time.sleep(20)
             

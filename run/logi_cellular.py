@@ -15,7 +15,6 @@ import logging
 import subprocess
 from socket import gaierror
 import psutil
-from datetime import datetime
 from serial import SerialException
 import Adafruit_BBIO.GPIO as GPIO
 import Adafruit_BBIO.ADC as ADC
