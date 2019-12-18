@@ -3,11 +3,8 @@
 import sys, os, signal
 
 sys.path.append('/home/debian/Desktop/Logi/controls/')
-activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
-exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
-
-sys.path.append('/home/debian/Desktop/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
+
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
@@ -23,7 +20,7 @@ import Adafruit_BBIO.ADC as ADC
 import threading
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 from socket import gaierror
 from itertools import cycle
@@ -110,6 +107,29 @@ def rtc_wake(time, mode):
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
+def time_convert(time_str):
+
+    hr = int(time_str[0:2])
+    mn = int(time_str[2:])
+    
+    return hr, mn
+
+def sleep_calc(time_str):
+
+    hr, mn = time_convert(time_str)
+
+    now = datetime.today()
+
+    if now < now.replace(day=now.day, hour=hr, minute=mn, second=0, microsecond=0):
+        nxt = now.replace(day=now.day, hour=hr, minute=mn, second=0, microsecond=0)
+    else:
+        nxt = now.replace(day=now.day, hour=hr, minute=mn, second=0, microsecond=0) + timedelta(days=1)
+
+    dt = nxt - now
+    sec = int(dt.total_seconds())
+
+    return sec
+
 def main():
 
     ### Set timezone
@@ -164,7 +184,7 @@ def main():
             led_blu.lightOn()
         
             ### Start connection light heartbeat
-            LED_blu_t = threading.Thread(name='lightLoop', target=lightLoop, args=(led_blu,))
+            LED_blu_t = threading.Thread(name='light_loop', target=light_loop, args=(led_blu,))
             LED_blu_t.start()
 
             ### Subscribe to MQTT Topics
@@ -204,7 +224,7 @@ def main():
             JSONpayload = json.dumps(
                 {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
                 'schem': schema, 'wake': wake_time, 'cyc': str(cycleCnt), 'err': err, 
-                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
+                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getPres(), 'temp': mplTemp['c']})
             
             ### Publish to MQTT Broker
             topic = 'logi/devices/%s'%(mqtt.thingName)
@@ -224,8 +244,7 @@ def main():
             logging.info('Wake up time: %s', wake_time)
             sleep_time = sleep_calc(wake_time)
             logging.info('Sleep time in sec: %s', str(sleep_time))
-            rtc_wake(str(sleep_time), "standby")
-            time.sleep(20)
+            time.sleep(sleep_time)
             
         except KeyboardInterrupt:
             pass
