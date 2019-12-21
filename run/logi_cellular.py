@@ -354,7 +354,19 @@ def connect_cycle():
     attempts = 1
     err = ""
 
-    while attempts <= 6:
+    while attempts <= 4:
+
+        if attempts == 4:
+            sleep_time = sleep_calc(wake_time)
+            logging.critical('FATAL ERROR: %s', err)
+            logging.critical('3 attempts made to connect to connect to mqtt client')
+            logging.critical('Sleeping until next cycle...')
+            logging.info('Wake up time: %s', wake_time)
+            rtc_wake(str(sleep_time), "mem")
+            time.sleep(15)
+            attempts = 1
+            continue
+
         cloud = None
         logging.info('- Connection Cycle Attempt %i -', attempts)
 
@@ -365,7 +377,8 @@ def connect_cycle():
             logging.info('--> Successfully found USB Modem') 
 
             time.sleep(5)
-
+            
+            ### Cycle the Antenna
             antenna_cycle(cloud)
 
             time.sleep(5)
@@ -373,13 +386,11 @@ def connect_cycle():
             ### Connect to Cellular Network
             logging.info('Connecting to Cellular Network...')
             connect_result = cloud.network.connect()
-
             if connect_result == False:
                 logging.error('ERR107: Could not connect to cellular network')
                 err = err + "E107; "
                 clean_kill()
                 continue
-
             else:
                 logging.info('--> Successfully Connected to Cell Network')
 
@@ -388,13 +399,11 @@ def connect_cycle():
             ### Connect to MQTT Client
             logging.info('Connecting to MQTT...')
             mqtt_result = myAWSIoTMQTTClient.connect()
-
             if mqtt_result == False: 
                 logging.error('ERR111: Could not Connect to MQTT Client')
                 err = err + "E111; "
                 clean_kill()
                 continue
-
             else: 
                 logging.info('--> Successfully Connected to MQTT Client')
 
