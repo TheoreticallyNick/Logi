@@ -25,7 +25,7 @@ from Exceptions.HologramError import NetworkError, PPPError, SerialError, Hologr
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
-from AWSIoTPythonSDK.exception.AWSIoTExceptions import *
+from AWSIoTPythonSDK.exception.AWSIoTExceptions import connectTimeoutException
 from LED import CommandLED
 from AD8 import Thermocouple
 from PX3 import Pressure
@@ -34,8 +34,6 @@ from DS1318 import FluidLevel
 from datetime import datetime, timedelta
 from threading import Timer
 from itertools import cycle
-
-schema = 'schema_1_2'
 
 ### TODO:
 #       - Put together an array of the connection function
@@ -85,7 +83,7 @@ def build_cloud_obj():
             logging.critical('3 attempts made to connect to build cloud object')
             logging.critical('Sleeping until next cycle')
             sleep_time = sleep_calc(wake_time)
-            rtc_wake(str(sleep_time), "standby")
+            rtc_wake(str(sleep_time), "mem")
             attempts = 0
             continue
 
@@ -96,7 +94,7 @@ def build_cloud_obj():
         except NetworkError:
             logging.error('ERR101: Could not find modem')
             err = err + "E101; "
-            rtc_wake("5", "standby")
+            rtc_wake("15", "mem")
             time.sleep(15)
             attempts += 1
             continue
@@ -104,7 +102,7 @@ def build_cloud_obj():
         except SerialError:
             logging.error('ERR103: Could not find usable serial port')
             err = err + "E103; "
-            rtc_wake("5", "standby")
+            rtc_wake("15", "mem")
             time.sleep(15)
             attempts += 1
             continue
@@ -126,7 +124,7 @@ def connect_cellular(cloud):
             logging.critical('3 attempts made to connect to connect to cellular network')
             logging.critical('Sleeping until next cycle')
             sleep_time = sleep_calc(wake_time)
-            rtc_wake(str(sleep_time), "standby")
+            rtc_wake(str(sleep_time), "mem")
             attempts = 0
             continue  
         
@@ -138,7 +136,7 @@ def connect_cellular(cloud):
             err = err + "E105; "
             
             if attempts < 2:
-                clean_kill(cloud)
+                clean_kill()
                 cloud , errx = build_cloud_obj()
                 err = err + errx
                 antenna_cycle(cloud)
@@ -146,8 +144,8 @@ def connect_cellular(cloud):
                 continue
             
             else:
-                clean_kill(cloud)
-                rtc_wake("5", "standby")
+                clean_kill()
+                rtc_wake("15", "mem")
                 time.sleep(15)
                 cloud , errx = build_cloud_obj()
                 err = err + errx
@@ -157,11 +155,11 @@ def connect_cellular(cloud):
 
 
         except SerialException:
-            logging.error('ERR121: Modem reports readiness but returns no data')
-            err = err + "E121; "
+            logging.error('ERR123: Modem reports readiness but returns no data')
+            err = err + "E123; "
             
             if attempts < 2:
-                clean_kill(cloud)
+                clean_kill()
                 cloud , errx = build_cloud_obj()
                 err = err + errx
                 antenna_cycle(cloud)
@@ -169,8 +167,8 @@ def connect_cellular(cloud):
                 continue
             
             else:
-                clean_kill(cloud)
-                rtc_wake("5", "standby")
+                clean_kill()
+                rtc_wake("15", "mem")
                 time.sleep(15)
                 cloud , errx = build_cloud_obj()
                 err = err + errx
@@ -186,7 +184,7 @@ def connect_cellular(cloud):
             err = err + "E107; "
             
             if attempts < 2:
-                clean_kill(cloud)
+                clean_kill()
                 cloud , errx = build_cloud_obj()
                 err = err + errx
                 antenna_cycle(cloud)
@@ -194,8 +192,8 @@ def connect_cellular(cloud):
                 continue
             
             else:
-                clean_kill(cloud)
-                rtc_wake("5", "standby")
+                clean_kill()
+                rtc_wake("5", "mem")
                 time.sleep(15)
                 cloud , errx = build_cloud_obj()
                 err = err + errx
@@ -230,8 +228,8 @@ def connect_mqtt(client, cloud):
         except gaierror:
             logging.error('ERR109: Temporary failure in DNS server name resolution')
             err = err + "E109; "
-            clean_kill(cloud)
-            rtc_wake("5", "standby")
+            clean_kill()
+            rtc_wake("15", "mem")
             time.sleep(15)
             cloud , errx = build_cloud_obj()
             err = err + errx
@@ -244,8 +242,8 @@ def connect_mqtt(client, cloud):
         except connectTimeoutException:
             logging.error('ERR121: MQTT client connection timeout')
             err = err + "E121; "
-            clean_kill(cloud)
-            rtc_wake("5", "standby")
+            clean_kill()
+            rtc_wake("15", "mem")
             time.sleep(15)
             cloud , errx = build_cloud_obj()
             err = err + errx
@@ -261,8 +259,8 @@ def connect_mqtt(client, cloud):
         else:
             logging.error('ERR111: Could not Connect to MQTT Client')
             err = err + "E111; "
-            clean_kill(cloud)
-            rtc_wake("5", "standby")
+            clean_kill()
+            rtc_wake("15", "mem")
             time.sleep(15)
             cloud , errx = build_cloud_obj()
             err = err + errx
@@ -295,10 +293,9 @@ def init_mqtt(mqtt):
     
     return myAWSIoTMQTTClient
 
-def clean_kill(cloud):
+def clean_kill():
     ### Turns off and destroys all PPP sessions to the cellular network
     logging.info('Disconnecting All Sessions...')
-    cloud.network.disconnect()
 
     for proc in psutil.process_iter():
 
@@ -313,6 +310,10 @@ def clean_kill(cloud):
             print(kill_proc_tree(pinfo['pid']))
     
     time.sleep(5)
+
+    logging.info('Soft rebooting...')
+    rtc_wake("15", "mem")
+    time.sleep(15)
 
 def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
     """Kill a process tree (including grandchildren) with signal
@@ -345,19 +346,115 @@ def antenna_cycle(cloud):
     
     logging.info('Cycling the radio antenna...')
     cloud.network.modem.radio_power(False)
-    time.sleep(15)
+    time.sleep(5)
     cloud.network.modem.radio_power(True)
-    time.sleep(15)
+    time.sleep(5)
+
+def connect_cycle():
+    attempts = 1
+    err = ""
+
+    while attempts <= 6:
+        cloud = None
+        logging.info('- Connection Cycle Attempt %i -', attempts)
+
+        try:
+            ### Init Cloud Object
+            logging.info('Connecting to on-board modem and building new cloud object...')
+            cloud = CustomCloud(None, network='cellular')
+            logging.info('--> Successfully found USB Modem') 
+
+            time.sleep(5)
+
+            antenna_cycle(cloud)
+
+            time.sleep(5)
+
+            ### Connect to Cellular Network
+            logging.info('Connecting to Cellular Network...')
+            connect_result = cloud.network.connect()
+
+            if connect_result == False:
+                logging.error('ERR107: Could not connect to cellular network')
+                err = err + "E107; "
+                clean_kill()
+                continue
+
+            else:
+                logging.info('--> Successfully Connected to Cell Network')
+
+            time.sleep(5)
+
+            ### Connect to MQTT Client
+            logging.info('Connecting to MQTT...')
+            mqtt_result = myAWSIoTMQTTClient.connect()
+
+            if mqtt_result == False: 
+                logging.error('ERR111: Could not Connect to MQTT Client')
+                err = err + "E111; "
+                clean_kill()
+                continue
+
+            else: 
+                logging.info('--> Successfully Connected to MQTT Client')
+
+        ### Cloud Object Error
+        except NetworkError:
+            logging.error('ERR101: Could not find modem')
+            err = err + "E101; "
+            clean_kill()
+            continue
+
+        ### Cloud Object Error
+        except SerialError:
+            logging.error('ERR103: Could not find usable serial port')
+            err = err + "E103; "
+            clean_kill()
+            continue
+        
+        ### Cellular Connection Error
+        except PPPError:
+            logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
+            err = err + "E105; "
+            clean_kill()
+            continue
+
+        ### Cellular Connection Error    
+        except SerialException:
+            logging.error('ERR123: Modem reports readiness but returns no data')
+            err = err + "E123; "
+            clean_kill()
+            continue
+
+        ### DNS Server Connection Error
+        except gaierror:
+            logging.error('ERR109: Temporary failure in DNS server name resolution')
+            err = err + "E109; "
+            clean_kill()
+            continue
+        
+        ### MQTT Connection Error
+        except connectTimeoutException:
+            logging.error('ERR121: MQTT client connection timeout')
+            err = err + "E121; "
+            clean_kill()
+            continue
+
+    return cloud, err
 
 def main():
 
+    global schema
+    global wake_time
+    global myAWSIoTMQTTClient
+    
     ### Set timezone
     os.environ['TZ'] = 'US/Eastern'
     time.tzset()
     timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
 
     ### Set up the logger
-    logi_log = str(time.asctime(time.localtime())) + "logiLog.log"
+    logi_log = "logi_log.log"
     logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
@@ -375,10 +472,7 @@ def main():
         w = input("Publish time %i: "%(i+1))
         sched.append(w)     # append time to list       
 
-    print(sched)
     sched_cycle = cycle(sched)
-
-    global wake_time 
     wake_time = sched[1]
 
     ### Init MQTT Parameters
@@ -386,28 +480,22 @@ def main():
     mqtt = ConnectMQTTParams()
     myAWSIoTMQTTClient = init_mqtt(mqtt)
 
+    ### Schema Version
+    schema = 'schema_1_2'
+    logging.info('MQTT Schema: %s', schema) 
+
     cycleCnt = 1
             
     while True:
 
         try:
             ### Start cycle
-            logging.info('Starting Cycle Number: %i', cycleCnt)
-            err = ""
+            logging.info('###---------- Starting Cycle Number: %i ----------###', cycleCnt)
             led_red = CommandLED("P8_8")
             led_red.lightOn()
-
-            ### Init Cloud Object
-            cloud, errx = build_cloud_obj()
-            err = err + errx
-
-            ### Connect to Cellular Network
-            cloud, errx = connect_cellular(cloud)
-            err = err + errx
-
-            ### Connect to MQTT Client
-            cloud, errx = connect_mqtt(myAWSIoTMQTTClient, cloud)
-            err = err + errx
+            
+            ### Start Connection Process
+            cloud, err = connect_cycle()
 
             ### Turn on blue light
             led_blu = CommandLED("P8_7")
@@ -457,14 +545,14 @@ def main():
             ### Measure the battery level
             bat_lvl = 95
 
+            ### Next Wake Up Time
             wake_time = (next(sched_cycle))
 
-            ### Set the MQTT Message
+            ### Set the MQTT Message Payload
             JSONpayload = json.dumps(
                 {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
                 'schem': schema, 'wake': wake_time, 'cyc': str(cycleCnt), 'err': err, 
                 'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
-
 
             ### Publish to MQTT Broker
             topic = 'logi/devices/%s'%(mqtt.thingName)
@@ -472,11 +560,12 @@ def main():
             logging.info('Published Message: %s', JSONpayload)
             myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
             cycleCnt = cycleCnt + 1
+
+            ### Set Publish Time Window Here
             
             ### Kill all open PPP connections and processes
             logging.info('Killing all PPP connections...')
-            clean_kill(cloud)
-            cloud = None
+            clean_kill()
             time.sleep(5)
             
             ### Cycle LED's to OFF

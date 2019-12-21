@@ -43,3 +43,4 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR117 - RSSI value error. Unable to acquire RSSI value.
     ERR119 - I2C signal error. I2C input signals are either faulted or not detected.
     ERR121 - MQTT Connection Timeout
+    ERR123 - Modem reports readiness but returns no data

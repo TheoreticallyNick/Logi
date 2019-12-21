@@ -9,3 +9,4 @@ cd Python-3.7.3
 ./configure
 make
 make install
+python3 -m pip install hologram-python smbus Adafruit_BBIO serial AWSIoTPythonSDK
