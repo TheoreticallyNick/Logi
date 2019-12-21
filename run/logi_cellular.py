@@ -337,7 +337,7 @@ def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, o
 def rtc_wake(time, mode):
     
     logging.warning('Soft Rebooting...')
-    bashCommand = "sudo rtcwake -u -s %s -m %s"%(time, mode)
+    bashCommand = "sudo rtcwake --date +%isec -m %s"%(time, mode)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
@@ -490,7 +490,7 @@ def main():
             logging.info('Wake up time: %s', wake_time)
             sleep_time = sleep_calc(wake_time)
             logging.info('Sleep time in sec: %s', str(sleep_time))
-            rtc_wake(str(sleep_time), "standby")
+            rtc_wake(str(sleep_time), "mem")
             time.sleep(20)
     
         except KeyboardInterrupt:
