@@ -9,4 +9,8 @@ cd Python-3.7.3
 ./configure
 make
 make install
+
+dependencies and packages:
 python3 -m pip install hologram-python smbus Adafruit_BBIO serial AWSIoTPythonSDK
+sudo apt-get install ntp
+sudo timedatectl set-timezone America/Detroit

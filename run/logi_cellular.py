@@ -338,7 +338,7 @@ def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, o
 def rtc_wake(time, mode):
     
     logging.warning('Soft Rebooting...')
-    bashCommand = "sudo rtcwake --date +%isec -m %s"%(time, mode)
+    bashCommand = "sudo rtcwake --date +%ssec -m %s"%(time, mode)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
