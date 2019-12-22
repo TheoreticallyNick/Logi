@@ -1,13 +1,6 @@
-#!/usr/bin/env python
-
 import sys, os, signal
-
-activate_this_file = "/home/debian/Desktop/Logi/bin/activate_this.py"
-exec(compile(open(activate_this_file, "rb").read(), activate_this_file, 'exec'), dict(__file__=activate_this_file))
-
 sys.path.append('/home/debian/Desktop/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
-
 import threading
 import json
 import time
@@ -15,7 +8,7 @@ import logging
 import subprocess
 from socket import gaierror
 import psutil
-from serial import SerialException
+from serial.serialutil import SerialException
 import Adafruit_BBIO.GPIO as GPIO
 import Adafruit_BBIO.ADC as ADC
 from Hologram.Network import Network, Cellular
@@ -34,6 +27,8 @@ from DS1318 import FluidLevel
 from datetime import datetime, timedelta
 from threading import Timer
 from itertools import cycle
+from ssl import SSLCertVerificationError
+from psutil import NoSuchProcess
 
 ### TODO:
 #       - Put together an array of the connection function
@@ -308,12 +303,6 @@ def clean_kill():
             print('Killing pid %s now' % pinfo['pid'])
             psutil.Process(pinfo['pid']).kill()
             print(kill_proc_tree(pinfo['pid']))
-    
-    time.sleep(5)
-
-    logging.info('Soft rebooting...')
-    rtc_wake("15", "mem")
-    time.sleep(15)
 
 def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
     """Kill a process tree (including grandchildren) with signal
@@ -339,6 +328,7 @@ def rtc_wake(time, mode):
     
     logging.warning('Soft Rebooting...')
     bashCommand = "sudo rtcwake --date +%ssec -m %s"%(time, mode)
+    logging.info(bashCommand)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
@@ -371,18 +361,16 @@ def connect_cycle():
         logging.info('- Connection Cycle Attempt %i -', attempts)
 
         try:
+            clean_kill()
+
             ### Init Cloud Object
             logging.info('Connecting to on-board modem and building new cloud object...')
             cloud = CustomCloud(None, network='cellular')
             logging.info('--> Successfully found USB Modem') 
 
-            time.sleep(5)
-            
             ### Cycle the Antenna
             antenna_cycle(cloud)
-
-            time.sleep(5)
-
+            
             ### Connect to Cellular Network
             logging.info('Connecting to Cellular Network...')
             connect_result = cloud.network.connect()
@@ -390,11 +378,12 @@ def connect_cycle():
                 logging.error('ERR107: Could not connect to cellular network')
                 err = err + "E107; "
                 clean_kill()
+                rtc_wake("15", "mem")
                 continue
             else:
                 logging.info('--> Successfully Connected to Cell Network')
 
-            time.sleep(5)
+            time.sleep(10)
 
             ### Connect to MQTT Client
             logging.info('Connecting to MQTT...')
@@ -403,15 +392,20 @@ def connect_cycle():
                 logging.error('ERR111: Could not Connect to MQTT Client')
                 err = err + "E111; "
                 clean_kill()
+                rtc_wake("15", "mem")
                 continue
             else: 
                 logging.info('--> Successfully Connected to MQTT Client')
+
+            break
 
         ### Cloud Object Error
         except NetworkError:
             logging.error('ERR101: Could not find modem')
             err = err + "E101; "
             clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
             continue
 
         ### Cloud Object Error
@@ -419,6 +413,8 @@ def connect_cycle():
             logging.error('ERR103: Could not find usable serial port')
             err = err + "E103; "
             clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
             continue
         
         ### Cellular Connection Error
@@ -426,6 +422,8 @@ def connect_cycle():
             logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
             err = err + "E105; "
             clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
             continue
 
         ### Cellular Connection Error    
@@ -433,6 +431,8 @@ def connect_cycle():
             logging.error('ERR123: Modem reports readiness but returns no data')
             err = err + "E123; "
             clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
             continue
 
         ### DNS Server Connection Error
@@ -440,6 +440,8 @@ def connect_cycle():
             logging.error('ERR109: Temporary failure in DNS server name resolution')
             err = err + "E109; "
             clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
             continue
         
         ### MQTT Connection Error
@@ -447,7 +449,21 @@ def connect_cycle():
             logging.error('ERR121: MQTT client connection timeout')
             err = err + "E121; "
             clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
             continue
+        
+        ### MQTT Connection Error
+        except SSLCertVerificationError:
+            logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
+            err = err + "E125; "
+            clean_kill()
+            rtc_wake("15", "mem")
+            attempts += 1
+
+        ### Clean Kill Error
+        except NoSuchProcess:
+            pass
 
     return cloud, err
 
@@ -482,7 +498,7 @@ def main():
         sched.append(w)     # append time to list       
 
     sched_cycle = cycle(sched)
-    wake_time = sched[1]
+    wake_time = sched[0]
 
     ### Init MQTT Parameters
     logging.info('Initializing MQTT Connection Parameters...')

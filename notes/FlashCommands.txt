@@ -1,7 +1,7 @@
-sudo apt-get update
-sudo apt-get remove python3
+sudo apt-get update && apt-get remove python3
 rm -r /usr/bin/python3*
 rm -r /usr/local/lib/python3*
+rm -r /usr/lib/python3*
 sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget
 curl -O https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tar.xz
 tar -xf Python-3.7.3.tar.xz
@@ -11,6 +11,9 @@ make
 make install
 
 dependencies and packages:
-python3 -m pip install hologram-python smbus Adafruit_BBIO serial AWSIoTPythonSDK
+python3 -m pip install smbus pyserial  serial Adafruit_BBIO AWSIoTPythonSDK xmodem hologram-python
 sudo apt-get install ntp
 sudo timedatectl set-timezone America/Detroit
+
+sudo modprobe option
+sudo echo "05c6 90b2" | sudo tee /sys/bus/usb-serial/drivers/option1/new_id
