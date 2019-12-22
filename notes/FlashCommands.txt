@@ -1,3 +1,4 @@
+### Installing Python3.7 ###
 sudo apt-get update && apt-get remove python3
 rm -r /usr/bin/python3*
 rm -r /usr/local/lib/python3*
@@ -10,10 +11,17 @@ cd Python-3.7.3
 make
 make install
 
-dependencies and packages:
-python3 -m pip install smbus pyserial  serial Adafruit_BBIO AWSIoTPythonSDK xmodem hologram-python
+### Dependencies ###
+python3 -m pip install smbus pyserial serial Adafruit_BBIO AWSIoTPythonSDK hologram-python xmodem
+
+### RTC Wake ###
 sudo apt-get install ntp
 sudo timedatectl set-timezone America/Detroit
+sudo nano /boot/uEnv.txt
+> ###enable_uboot_cape_universal=1
 
-sudo modprobe option
-sudo echo "05c6 90b2" | sudo tee /sys/bus/usb-serial/drivers/option1/new_id
+### Update Nova Firmware
+git clone https://github.com/hologram-io/hologram-tools.git
+cd hologram-tools/novaupdate/
+sudo nano nova410update.py
+> change 'raw_input' to 'input'
