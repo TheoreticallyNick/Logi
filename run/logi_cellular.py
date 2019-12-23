@@ -122,7 +122,7 @@ def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, o
 def rtc_wake(time, mode):
     
     logging.warning('Soft Rebooting...')
-    bashCommand = "sudo rtcwake -s %s -m %s"%(time, mode)
+    bashCommand = "sudo rtcwake -u -s %s -m %s"%(time, mode)
     logging.info(bashCommand)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
@@ -178,7 +178,7 @@ def connect_cycle():
             else:
                 logging.info('--> Successfully Connected to Cell Network')
 
-            time.sleep(10)
+            time.sleep(15)
 
             ### Connect to MQTT Client
             logging.info('Connecting to MQTT...')
@@ -192,6 +192,7 @@ def connect_cycle():
             else: 
                 logging.info('--> Successfully Connected to MQTT Client')
 
+            time.sleep(15)
             break
 
         ### Cloud Object Error
