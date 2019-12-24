@@ -4,6 +4,7 @@ sys.path.append('/home/debian/Desktop/keys/')
 import threading
 import json
 import time
+from time import ctime
 import logging
 import subprocess
 from socket import gaierror
@@ -29,6 +30,7 @@ from threading import Timer
 from itertools import cycle
 from ssl import SSLCertVerificationError
 from psutil import NoSuchProcess
+import ntplib
 
 ### TODO:
 #       - Put together an array of the connection function
@@ -127,6 +129,8 @@ def rtc_wake(time, mode):
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
+    time.sleep(20)
+
 def antenna_cycle(cloud):
     
     logging.info('Cycling the radio antenna...')
@@ -148,7 +152,6 @@ def connect_cycle():
             logging.critical('Sleeping until next cycle...')
             logging.info('Wake up time: %s', wake_time)
             rtc_wake(str(sleep_time), "mem")
-            time.sleep(15)
             attempts = 1
             continue
 
@@ -178,7 +181,7 @@ def connect_cycle():
             else:
                 logging.info('--> Successfully Connected to Cell Network')
 
-            time.sleep(15)
+            time.sleep(10)
 
             ### Connect to MQTT Client
             logging.info('Connecting to MQTT...')
@@ -192,7 +195,7 @@ def connect_cycle():
             else: 
                 logging.info('--> Successfully Connected to MQTT Client')
 
-            time.sleep(15)
+            time.sleep(10)
             break
 
         ### Cloud Object Error
@@ -263,6 +266,41 @@ def connect_cycle():
 
     return cloud, err
 
+def get_ntp(server):
+    
+    hostname = "google.com"
+    response = os.system("ping -c 1 " + hostname)
+    try:
+        ntpDate = None
+        client = ntplib.NTPClient()
+        response = client.request(server, version=3)
+        response.offset
+        ntpDate = ctime(response.tx_time)
+        logging.info('UTC Server Time is: %s', ntpDate)
+    
+    except Exception as e:
+        print(e)
+    
+    return ntpDate
+
+def set_time(rolex):
+
+    logging.warning('Setting HWclock...')
+    bashCommand = 'hwclock --set --date %s'%(rolex)
+    logging.info(bashCommand)
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+
+    time.sleep(3)
+
+    logging.warning('Setting System Clock to HWclock...')
+    bashCommand = 'hwclock --hctosys'
+    logging.info(bashCommand)
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+
+    time.sleep(3)
+
 def main():
 
     global schema
@@ -283,13 +321,13 @@ def main():
     logging.info('###---------- Logi Cellular Program Start ----------###')
 
     ### Set sleep schedule
-    logging.info('Local Time: %s', timelocal)
     sched = []      # empty schedule list
-    n = int(input("Number of publishes per day: "))
 
-    for i in range(0,n):
-        w = input("Publish time %i: "%(i+1))
-        sched.append(w)     # append time to list       
+    f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
+    sched = f.read().split(',')
+    f.close()
+
+    logging.info(sched)       
 
     sched_cycle = cycle(sched)
     wake_time = sched[0]
@@ -315,6 +353,12 @@ def main():
             
             ### Start Connection Process
             cloud, err = connect_cycle()
+
+            ### Calibrate the System Time
+            if cycleCnt == 1:
+                rolex = get_ntp('0.debian.pool.ntp.org')
+                logging.info('UTC Time: %s', rolex)
+                set_time(rolex)
 
             ### Turn on blue light
             led_blu = CommandLED("P8_7")
@@ -399,7 +443,6 @@ def main():
             sleep_time = sleep_calc(wake_time)
             logging.info('Sleep time in sec: %s', str(sleep_time))
             rtc_wake(str(sleep_time), "mem")
-            time.sleep(20)
     
         except KeyboardInterrupt:
             pass

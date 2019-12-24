@@ -12,7 +12,7 @@ make
 make install
 
 ### Dependencies ###
-python3 -m pip install smbus pyserial serial Adafruit_BBIO AWSIoTPythonSDK hologram-python xmodem
+python3 -m pip install smbus pyserial serial Adafruit_BBIO AWSIoTPythonSDK hologram-python xmodem ntplib datetime
 
 ### RTC Wake ###
 sudo apt-get install ntp
@@ -25,3 +25,7 @@ git clone https://github.com/hologram-io/hologram-tools.git
 cd hologram-tools/novaupdate/
 sudo nano nova410update.py
 > change 'raw_input' to 'input'
+
+### Stop NTP 
+sudo service ntp stop
+sudo update-rc.d -f ntp remove
