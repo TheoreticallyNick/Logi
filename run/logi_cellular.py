@@ -121,15 +121,15 @@ def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, o
     
     return (gone, alive)
 
-def rtc_wake(time, mode):
+def rtc_wake(rolex, mode):
     
     logging.warning('Soft Rebooting...')
-    bashCommand = "sudo rtcwake -u -s %s -m %s"%(time, mode)
+    bashCommand = "sudo rtcwake -u -s %s -m %s"%(rolex, mode)
     logging.info("@bash: %s", bashCommand)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
-    time.sleep(20)
+    time.sleep(15)
 
 def antenna_cycle(cloud):
     
