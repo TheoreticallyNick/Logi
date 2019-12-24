@@ -4,7 +4,7 @@ sys.path.append('/home/debian/Desktop/keys/')
 import threading
 import json
 import time
-from time import ctime
+from time import ctime, sleep
 import logging
 import subprocess
 from socket import gaierror
@@ -125,7 +125,7 @@ def rtc_wake(time, mode):
     
     logging.warning('Soft Rebooting...')
     bashCommand = "sudo rtcwake -u -s %s -m %s"%(time, mode)
-    logging.info(bashCommand)
+    logging.info("@bash: %s", bashCommand)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
@@ -287,7 +287,7 @@ def set_time(rolex):
 
     logging.warning('Setting HWclock...')
     bashCommand = 'hwclock --set --date %s'%(rolex)
-    logging.info(bashCommand)
+    logging.info("@bash: %s", bashCommand)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
@@ -295,7 +295,7 @@ def set_time(rolex):
 
     logging.warning('Setting System Clock to HWclock...')
     bashCommand = 'hwclock --hctosys'
-    logging.info(bashCommand)
+    logging.info("@bash: %s", bashCommand)
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
