@@ -173,8 +173,9 @@ def connect_cycle():
             logging.info('Connecting to Cellular Network...')
             connect_result = cloud.network.connect()
             if connect_result == False:
-                logging.error('ERR107: Could not connect to cellular network')
+                logging.error('ERR107: Could not connect to cellular network - modem hangup')
                 err = err + "E107; "
+                attempts += 1
                 clean_kill()
                 rtc_wake("15", "mem")
                 continue
@@ -189,6 +190,7 @@ def connect_cycle():
             if mqtt_result == False: 
                 logging.error('ERR111: Could not Connect to MQTT Client')
                 err = err + "E111; "
+                attempts += 1
                 clean_kill()
                 rtc_wake("15", "mem")
                 continue
@@ -196,6 +198,7 @@ def connect_cycle():
                 logging.info('--> Successfully Connected to MQTT Client')
 
             time.sleep(10)
+            
             break
 
         ### Cloud Object Error
