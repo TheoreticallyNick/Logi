@@ -427,7 +427,7 @@ def main():
             myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
             cycleCnt = cycleCnt + 1
 
-            ### Set Publish Time Window Here
+            ### Set Subscribe Time Window Here
             
             ### Kill all open PPP connections and processes
             logging.info('Killing all PPP connections...')
