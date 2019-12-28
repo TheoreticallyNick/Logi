@@ -1,10 +1,10 @@
 import unittest
-import sys, os        
+import sys, os 
+sys.path.append("C:\\Users\\Windows_Admin\\Dropbox\\Greater Lakes Engineering\\Clients\\Internal Projects\\IoT\\Logi\\Software\\Logi\\run")       
 import ntplib
 from time import ctime
 from datetime import datetime, timezone
-sys.path.append('/home/debian/Desktop/Logi/run')
-from logi_cellular import *
+from logi_cellular import time_now_str, time_convert
 
 class LogiTest(unittest.TestCase):
 
@@ -12,15 +12,9 @@ class LogiTest(unittest.TestCase):
         self.assertEqual(time_convert('1232'), (12, 32))
         self.assertEqual(time_convert('0812'), (8, 12))
 
-    def test_get_ntp(self):
-
-        c = ntplib.NTPClient()
-        # Provide the respective ntp server ip in below function
-        response = c.request('0.debian.pool.ntp.org', version=3)
-        response.offset 
-        print(response)
-        ntpDate = ctime(response.tx_time)
-        print(ntpDate)
+    def test_order_sched(self):
+        sched = ['1200', '0900']
+        self.assertEqual(order_sched()) 
 
 if __name__ == '__main__':
     unittest.main()

@@ -42,7 +42,7 @@ def light_loop(lightObj):
     while getattr(t, "do_run", True):
         lightObj.lightHeart()
 
-def time_convert(time_str):
+def time_split(time_str):
 
     hr = int(time_str[0:2])
     mn = int(time_str[2:])
@@ -51,7 +51,7 @@ def time_convert(time_str):
 
 def sleep_calc(time_str):
 
-    hr, mn = time_convert(time_str)
+    hr, mn = time_split(time_str)
 
     now = datetime.today()
 
@@ -304,6 +304,39 @@ def set_time(rolex):
 
     time.sleep(3)
 
+def time_now_str():
+    now = datetime.now()
+    hr_now = str(now.hour)
+    if len(hr_now) < 2:
+        hr_now = '0' + hr_now
+
+    min_now = str(now.minute)
+    if len(min_now) < 2:
+        min_now = '0' + min_now
+
+    time_now = hr_now + min_now
+
+    return time_now
+
+def sched_index(sched):
+    now = time_now_str()
+    post = []
+    pre = []
+
+    for i in range(len(sched)):
+        if sched[i] <= now:
+            pre.append(sched[i])
+        
+        if sched[i] > now:
+            post.append(sched[i])
+    
+    pre.sort()
+    post.sort()
+    new_sched = post + pre
+    #logging.info(new_sched)
+    
+    return new_sched
+
 def main():
 
     global schema
@@ -322,18 +355,6 @@ def main():
 
     ### Start the program
     logging.info('###---------- Logi Cellular Program Start ----------###')
-
-    ### Set sleep schedule
-    sched = []      # empty schedule list
-
-    f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
-    sched = f.read().split(',')
-    f.close()
-
-    logging.info(sched)       
-
-    sched_cycle = cycle(sched)
-    wake_time = sched[0]
 
     ### Init MQTT Parameters
     logging.info('Initializing MQTT Connection Parameters...')
@@ -362,6 +383,19 @@ def main():
                 rolex = get_ntp('0.debian.pool.ntp.org')
                 logging.info('UTC Time: %s', rolex)
                 set_time(rolex)
+                ### Set sleep schedule
+                sched = []      # empty schedule list
+
+                f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
+                sched = f.read().split(',')
+                f.close()
+
+                #logging.info('Previous Schedule: %s', sched)    
+                sched = sched_index(sched)   
+                #logging.info('New Schedule: %s', sched)
+                sched_cycle = cycle(sched)
+                wake_time = sched[0]
+                logging.info('First Wake time: %s', wake_time)
 
             ### Turn on blue light
             led_blu = CommandLED("P8_7")
