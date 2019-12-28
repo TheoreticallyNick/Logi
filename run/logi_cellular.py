@@ -460,4 +460,6 @@ def main():
     logging.info('\n Program Terminated')
 
     os._exit(1)
-
+    
+if __name__=="__main__":
+    main()
