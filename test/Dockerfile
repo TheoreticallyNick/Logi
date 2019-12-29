@@ -1,12 +1,16 @@
-FROM debian:buster
+FROM balenalib/beaglebone-black:stretch
 FROM python:3.7
 
 ADD logi_test.py /
 
-RUN pip install hologram-python && \
-    pip install smbus && \
-    pip install serial && \
-    pip install AWSIoTPythonSDK \
-    pip install Adafruit_BBIO \
+RUN apt-get update && apt-get install -y \
+    python-dev \
+    python-pip
 
-CMD [ "python", "logi_test.py" ]
+RUN pip install hologram-python \
+    smbus \
+    serial \ 
+    AWSIoTPythonSDK==1.0.0 \
+    Adafruit_BBIO 
+
+CMD [ "python", "./logi_test.py" ]

@@ -42,21 +42,21 @@ class LogiConnect:
     def __init__(self):
         self.schema = 'schema_1_2'
     
-    def light_loop(lightObj):
+    def light_loop(self, lightObj):
         t = threading.currentThread()
         while getattr(t, "do_run", True):
             lightObj.lightHeart()
 
-    def time_split(time_str):
+    def time_split(self, time_str):
 
         hr = int(time_str[0:2])
         mn = int(time_str[2:])
         
         return hr, mn
 
-    def sleep_calc(time_str):
+    def sleep_calc(self, time_str):
 
-        hr, mn = time_split(time_str)
+        hr, mn = self.time_split(time_str)
 
         now = datetime.today()
 
@@ -70,7 +70,7 @@ class LogiConnect:
 
         return sec
 
-    def init_mqtt(mqtt):
+    def init_mqtt(self, mqtt):
         ### Initializes all parameters and keys for the MQTT broker connection
         self.myAWSIoTMQTTClient = None
 
@@ -90,7 +90,7 @@ class LogiConnect:
         
         return self.myAWSIoTMQTTClient
 
-    def clean_kill():
+    def clean_kill(self):
         ### Turns off and destroys all PPP sessions to the cellular network
         logging.info('Disconnecting All Sessions...')
 
@@ -104,9 +104,9 @@ class LogiConnect:
                 print('Found existing PPP session on pid: %s' % pinfo['pid'])
                 print('Killing pid %s now' % pinfo['pid'])
                 psutil.Process(pinfo['pid']).kill()
-                print(kill_proc_tree(pinfo['pid']))
+                print(self.kill_proc_tree(pinfo['pid']))
 
-    def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
+    def kill_proc_tree(self, pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
         """Kill a process tree (including grandchildren) with signal
         "sig" and return a (gone, still_alive) tuple.
         "on_terminate", if specified, is a callabck function which is
@@ -126,7 +126,7 @@ class LogiConnect:
         
         return (gone, alive)
 
-    def rtc_wake(rolex, mode):
+    def rtc_wake(self, rolex, mode):
         
         logging.warning('Soft Rebooting...')
         bashCommand = "sudo rtcwake -u -s %s -m %s"%(rolex, mode)
@@ -136,7 +136,7 @@ class LogiConnect:
 
         time.sleep(15)
 
-    def antenna_cycle(cloud):
+    def antenna_cycle(self, cloud):
         
         logging.info('Cycling the radio antenna...')
         cloud.network.modem.radio_power(False)
@@ -144,19 +144,19 @@ class LogiConnect:
         cloud.network.modem.radio_power(True)
         time.sleep(5)
 
-    def connect_cycle():
+    def connect_cycle(self, cyc):
         attempts = 1
         err = ""
 
         while attempts <= 4:
 
             if attempts == 4:
-                sleep_time = sleep_calc(self.wake_time)
+                sleep_time = self.sleep_calc(self.wake_time)
                 logging.critical('FATAL ERROR: %s', err)
                 logging.critical('3 attempts made to connect to connect to mqtt client')
                 logging.critical('Sleeping until next cycle...')
                 logging.info('Wake up time: %s', self.wake_time)
-                rtc_wake(str(sleep_time), "mem")
+                self.rtc_wake(str(sleep_time), "mem")
                 attempts = 1
                 continue
 
@@ -164,7 +164,7 @@ class LogiConnect:
             logging.info('- Connection Cycle Attempt %i -', attempts)
 
             try:
-                clean_kill()
+                self.clean_kill()
 
                 ### Init Cloud Object
                 logging.info('Connecting to on-board modem and building new cloud object...')
@@ -172,7 +172,7 @@ class LogiConnect:
                 logging.info('--> Successfully found USB Modem') 
 
                 ### Cycle the Antenna
-                antenna_cycle(cloud)
+                self.antenna_cycle(cloud)
                 
                 ### Connect to Cellular Network
                 logging.info('Connecting to Cellular Network...')
@@ -181,13 +181,18 @@ class LogiConnect:
                     logging.error('ERR107: Could not connect to cellular network - modem hangup')
                     err = err + "E107; "
                     attempts += 1
-                    clean_kill()
-                    rtc_wake("15", "mem")
+                    self.clean_kill()
+                    self.rtc_wake("15", "mem")
                     continue
                 else:
                     logging.info('--> Successfully Connected to Cell Network')
 
                 time.sleep(10)
+
+                if cyc == 1:
+                    rolex = self.get_ntp('0.debian.pool.ntp.org')
+                    logging.info('UTC Time: %s', rolex)
+                    self.set_time(rolex)
 
                 ### Connect to MQTT Client
                 logging.info('Connecting to MQTT...')
@@ -196,8 +201,8 @@ class LogiConnect:
                     logging.error('ERR111: Could not Connect to MQTT Client')
                     err = err + "E111; "
                     attempts += 1
-                    clean_kill()
-                    rtc_wake("15", "mem")
+                    self.clean_kill()
+                    self.rtc_wake("15", "mem")
                     continue
                 else: 
                     logging.info('--> Successfully Connected to MQTT Client')
@@ -210,8 +215,8 @@ class LogiConnect:
             except NetworkError:
                 logging.error('ERR101: Could not find modem')
                 err = err + "E101; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
                 continue
 
@@ -219,8 +224,8 @@ class LogiConnect:
             except SerialError:
                 logging.error('ERR103: Could not find usable serial port')
                 err = err + "E103; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
                 continue
             
@@ -228,8 +233,8 @@ class LogiConnect:
             except PPPError:
                 logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
                 err = err + "E105; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
                 continue
 
@@ -237,8 +242,8 @@ class LogiConnect:
             except SerialException:
                 logging.error('ERR123: Modem reports readiness but returns no data')
                 err = err + "E123; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
                 continue
 
@@ -246,8 +251,8 @@ class LogiConnect:
             except gaierror:
                 logging.error('ERR109: Temporary failure in DNS server name resolution')
                 err = err + "E109; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
                 continue
             
@@ -255,8 +260,8 @@ class LogiConnect:
             except connectTimeoutException:
                 logging.error('ERR121: MQTT client connection timeout')
                 err = err + "E121; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
                 continue
             
@@ -264,8 +269,8 @@ class LogiConnect:
             except SSLCertVerificationError:
                 logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
                 err = err + "E125; "
-                clean_kill()
-                rtc_wake("15", "mem")
+                self.clean_kill()
+                self.rtc_wake("15", "mem")
                 attempts += 1
 
             ### Clean Kill Error
@@ -273,8 +278,8 @@ class LogiConnect:
                 pass
 
         return cloud, err
-
-    def get_ntp(server):
+    
+    def get_ntp(self, server):
         
         hostname = "google.com"
         response = os.system("ping -c 1 " + hostname)
@@ -291,7 +296,7 @@ class LogiConnect:
         
         return ntpDate
 
-    def set_time(rolex):
+    def set_time(self, rolex):
 
         logging.warning('Setting HWclock...')
         bashCommand = 'hwclock --set --date %s'%(rolex)
@@ -309,7 +314,7 @@ class LogiConnect:
 
         time.sleep(3)
 
-    def time_now_str():
+    def time_now_str(self):
         now = datetime.now()
         hr_now = str(now.hour)
         if len(hr_now) < 2:
@@ -323,8 +328,8 @@ class LogiConnect:
 
         return time_now
 
-    def sched_index(sched):
-        now = time_now_str()
+    def sched_index(self, sched):
+        now = self.time_now_str()
         post = []
         pre = []
 
@@ -342,7 +347,7 @@ class LogiConnect:
         
         return new_sched
 
-    def main():
+    def main(self):
         
         ### Set timezone
         timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
@@ -360,29 +365,27 @@ class LogiConnect:
         ### Init MQTT Parameters
         logging.info('Initializing MQTT Connection Parameters...')
         mqtt = ConnectMQTTParams()
-        self.myAWSIoTMQTTClient = init_mqtt(mqtt)
+        self.myAWSIoTMQTTClient = self.init_mqtt(mqtt)
 
         ### Schema Version
         logging.info('MQTT Schema: %s', self.schema) 
 
-        cycleCnt = 1
+        cycle_cnt = 1
                 
         while True:
 
             try:
                 ### Start cycle
-                logging.info('###---------- Starting Cycle Number: %i ----------###', cycleCnt)
+                logging.info('###---------- Starting Cycle Number: %i ----------###', cycle_cnt)
                 led_red = CommandLED("P8_8")
                 led_red.lightOn()
                 
                 ### Start Connection Process
-                cloud, err = connect_cycle()
+                cloud, err = self.connect_cycle(cycle_cnt)
 
                 ### Calibrate the System Time
-                if cycleCnt == 1:
-                    rolex = get_ntp('0.debian.pool.ntp.org')
-                    logging.info('UTC Time: %s', rolex)
-                    set_time(rolex)
+                if cycle_cnt == 1:
+                    
                     ### Set sleep schedule
                     sched = []      # empty schedule list
 
@@ -391,7 +394,7 @@ class LogiConnect:
                     f.close()
 
                     #logging.info('Previous Schedule: %s', sched)    
-                    sched = sched_index(sched)   
+                    sched = self.sched_index(sched)   
                     #logging.info('New Schedule: %s', sched)
                     sched_cycle = cycle(sched)
                     self.wake_time = sched[0]
@@ -402,7 +405,7 @@ class LogiConnect:
                 led_blu.lightOn()
 
                 ### Start connection light heartbeat
-                LED_blu_t = threading.Thread(name='lightLoop', target=light_loop, args=(led_blu,))
+                LED_blu_t = threading.Thread(name='lightLoop', target=self.light_loop, args=(led_blu,))
                 LED_blu_t.start()
 
                 ### Init Board I/O
@@ -451,7 +454,7 @@ class LogiConnect:
                 ### Set the MQTT Message Payload
                 JSONpayload = json.dumps(
                     {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                    'schem': self.schema, 'wake': self.wake_time, 'cyc': str(cycleCnt), 'err': err, 
+                    'schem': self.schema, 'wake': self.wake_time, 'cyc': str(cycle_cnt), 'err': err, 
                     'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
 
                 ### Publish to MQTT Broker
@@ -459,13 +462,13 @@ class LogiConnect:
                 logging.info('Topic: %s', topic)
                 logging.info('Published Message: %s', JSONpayload)
                 self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
-                cycleCnt = cycleCnt + 1
+                cycle_cnt = cycle_cnt + 1
 
                 ### Set Subscribe Time Window Here
                 
                 ### Kill all open PPP connections and processes
                 logging.info('Killing all PPP connections...')
-                clean_kill()
+                self.clean_kill()
                 time.sleep(5)
                 
                 ### Cycle LED's to OFF
@@ -477,9 +480,9 @@ class LogiConnect:
 
                 ### Bash Command to Enter Sleep Cycle
                 logging.info('Wake up time: %s', self.wake_time)
-                sleep_time = sleep_calc(self.wake_time)
+                sleep_time = self.sleep_calc(self.wake_time)
                 logging.info('Sleep time in sec: %s', str(sleep_time))
-                rtc_wake(str(sleep_time), "mem")
+                self.rtc_wake(str(sleep_time), "mem")
         
             except KeyboardInterrupt:
                 pass
@@ -497,4 +500,4 @@ class LogiConnect:
         
 if __name__=="__main__":
     logi_run = LogiConnect()
-    logi_run.main
+    logi_run.main()
