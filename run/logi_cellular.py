@@ -31,6 +31,7 @@ from itertools import cycle
 from ssl import SSLCertVerificationError
 from psutil import NoSuchProcess
 import ntplib
+from PWR import Battery
 
 ### TODO:
 #       - Put together an array of the connection function
@@ -442,7 +443,18 @@ class LogiConnect:
                     mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
                 ### Measure the battery level
-                bat_lvl = 95
+                try:
+                    bat = Battery("P8_9")
+                    if bat.getStatus:
+                        bat_lvl = "okay"
+                    else:
+                        bat_lvl = "low"
+                
+                except: 
+                    logging.error('ERR125: Battery status GPIO error')
+                    err = err + "ERR125; "
+                    bat_lvl = "err"
+
 
                 ### Next Wake Up Time
                 self.wake_time = (next(sched_cycle))
@@ -482,8 +494,6 @@ class LogiConnect:
                 pass
                 
         ### Turn Off LED and Clean Up GPIO Before Exiting
-        LED_blu_t.do_run = False
-        LED_blu_t.join()
         led_blu.lightOff()
         led_red.lightOff()
         

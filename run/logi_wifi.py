@@ -13,6 +13,7 @@ from LED import CommandLED
 from AD8 import Thermocouple
 from PX3 import Pressure
 from MPL import MPL3115A2
+from PWR import Battery
 from socket import gaierror
 from DS1318 import FluidLevel
 import Adafruit_BBIO.GPIO as GPIO
@@ -130,15 +131,46 @@ def sleep_calc(time_str):
 
     return sec
 
+def time_now_str():
+        now = datetime.now()
+        hr_now = str(now.hour)
+        if len(hr_now) < 2:
+            hr_now = '0' + hr_now
+
+        min_now = str(now.minute)
+        if len(min_now) < 2:
+            min_now = '0' + min_now
+
+        time_now = hr_now + min_now
+
+        return time_now
+
+def sched_index(sched):
+        now = time_now_str()
+        post = []
+        pre = []
+
+        for i in range(len(sched)):
+            if sched[i] <= now:
+                pre.append(sched[i])
+            
+            if sched[i] > now:
+                post.append(sched[i])
+        
+        pre.sort()
+        post.sort()
+        new_sched = post + pre
+        #logging.info(new_sched)
+        
+        return new_sched
+
 def main():
 
     ### Set timezone
-    os.environ['TZ'] = 'US/Eastern'
-    time.tzset()
     timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
 
     ### Set up the logger
-    logi_log = str(time.asctime(time.localtime())) + "logiLog.log"
+    logi_log = "logi_log.log"
     logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
@@ -146,27 +178,12 @@ def main():
 
     logging.info('###----------- Logi Wifi Program Start -----------###')
 
-     ### Set sleep schedule
-    logging.info('Local Time: %s', timelocal)
-    sched = []      # empty schedule list
-    n = int(input("Number of publishes per day: "))
-
-    for i in range(0,n):
-        w = input("Publish time %i: "%(i+1))
-        sched.append(w)     # append time to list       
-
-    print(sched)
-    sched_cycle = cycle(sched)
-
-    global wake_time 
-    wake_time = sched[1]
-
     ### Init MQTT Parameters
     logging.info('Initializing MQTT Connection Parameters...')
     mqtt = ConnectMQTTParams()
     myAWSIoTMQTTClient = init_mqtt(mqtt)
 
-    cycleCnt = 1
+    cycle_cnt = 1
         
     while True:
         try:
@@ -182,11 +199,24 @@ def main():
             ### Turn on blue light
             led_blu = CommandLED("P8_7")
             led_blu.lightOn()
-        
-            ### Start connection light heartbeat
-            LED_blu_t = threading.Thread(name='light_loop', target=light_loop, args=(led_blu,))
-            LED_blu_t.start()
 
+            ### Calibrate the System Time
+            if cycle_cnt == 1:
+                
+                ### Set sleep schedule
+                sched = []      # empty schedule list
+
+                f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
+                sched = f.read().split(',')
+                f.close()
+
+                #logging.info('Previous Schedule: %s', sched)    
+                sched = sched_index(sched)   
+                #logging.info('New Schedule: %s', sched)
+                sched_cycle = cycle(sched)
+                wake_time = sched[0]
+                logging.info('First Wake time: %s', wake_time)
+        
             ### Subscribe to MQTT Topics
             #myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
 
@@ -215,7 +245,19 @@ def main():
                 err = err + "E119; "
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            bat_lvl = 95
+            ### Measure the battery level
+            try:
+                bat = Battery("P8_9")
+                if bat.getStatus():
+                    bat_lvl = "okay"
+                else:
+                    bat_lvl = "low"
+            
+            except: 
+                logging.error('ERR125: Battery status GPIO error')
+                err = err + "ERR125; "
+                bat_lvl = "err"
+
 
             wake_time = (next(sched_cycle))
 
@@ -223,7 +265,7 @@ def main():
             
             JSONpayload = json.dumps(
                 {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                'schem': schema, 'wake': wake_time, 'cyc': str(cycleCnt), 'err': err, 
+                'schem': schema, 'wake': wake_time, 'cyc': str(cycle_cnt), 'err': err, 
                 'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getPres(), 'temp': mplTemp['c']})
             
             ### Publish to MQTT Broker
@@ -231,11 +273,9 @@ def main():
             logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
             myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
-            cycleCnt = cycleCnt + 1
+            cycle_cnt = cycle_cnt + 1
 
             ### Turn Off LED and Clean Up GPIO Before Exiting
-            LED_blu_t.do_run = False
-            LED_blu_t.join()
             led_blu.lightOff()
             led_red.lightOff()
             GPIO.cleanup()
@@ -250,8 +290,6 @@ def main():
             pass
             
     ### Turn Off LED and Clean Up GPIO Before Exiting
-    LED_blu_t.do_run = False
-    LED_blu_t.join()
     led_blu.lightOff()
     led_red.lightOff()
     
