@@ -383,6 +383,10 @@ class LogiConnect:
                 ### Start Connection Process
                 cloud, err = self.connect_cycle(cycle_cnt)
 
+                ### Turn on blue light
+                led_blu = CommandLED("P8_7")
+                led_blu.lightOn()
+        
                 ### Calibrate the System Time
                 if cycle_cnt == 1:
                     
@@ -399,14 +403,6 @@ class LogiConnect:
                     sched_cycle = cycle(sched)
                     self.wake_time = sched[0]
                     logging.info('First Wake time: %s', self.wake_time)
-
-                ### Turn on blue light
-                led_blu = CommandLED("P8_7")
-                led_blu.lightOn()
-
-                ### Start connection light heartbeat
-                LED_blu_t = threading.Thread(name='lightLoop', target=self.light_loop, args=(led_blu,))
-                LED_blu_t.start()
 
                 ### Init Board I/O
                 logging.info('Initialing Board I/O...')
@@ -472,8 +468,6 @@ class LogiConnect:
                 time.sleep(5)
                 
                 ### Cycle LED's to OFF
-                LED_blu_t.do_run = False
-                LED_blu_t.join()
                 led_blu.lightOff()
                 led_red.lightOff()
                 GPIO.cleanup()
