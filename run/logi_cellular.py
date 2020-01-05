@@ -445,7 +445,7 @@ class LogiConnect:
                 ### Measure the battery level
                 try:
                     bat = Battery("P8_9")
-                    if bat.getStatus:
+                    if bat.getStatus():
                         bat_lvl = "okay"
                     else:
                         bat_lvl = "low"
