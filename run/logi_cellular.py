@@ -183,7 +183,7 @@ class LogiConnect:
                     err = err + "E107; "
                     attempts += 1
                     self.clean_kill()
-                    self.rtc_wake("15", "mem")
+                    self.rtc_wake("150", "mem")
                     continue
                 else:
                     logging.info('--> Successfully Connected to Cell Network')
@@ -203,7 +203,7 @@ class LogiConnect:
                     err = err + "E111; "
                     attempts += 1
                     self.clean_kill()
-                    self.rtc_wake("15", "mem")
+                    self.rtc_wake("150", "mem")
                     continue
                 else: 
                     logging.info('--> Successfully Connected to MQTT Client')
@@ -226,7 +226,7 @@ class LogiConnect:
                 logging.error('ERR103: Could not find usable serial port')
                 err = err + "E103; "
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake("150", "mem")
                 attempts += 1
                 continue
             
@@ -235,7 +235,7 @@ class LogiConnect:
                 logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
                 err = err + "E105; "
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake("150", "mem")
                 attempts += 1
                 continue
 
@@ -244,7 +244,7 @@ class LogiConnect:
                 logging.error('ERR123: Modem reports readiness but returns no data')
                 err = err + "E123; "
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake("150", "mem")
                 attempts += 1
                 continue
 
@@ -253,7 +253,7 @@ class LogiConnect:
                 logging.error('ERR109: Temporary failure in DNS server name resolution')
                 err = err + "E109; "
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake("150", "mem")
                 attempts += 1
                 continue
             
@@ -262,7 +262,7 @@ class LogiConnect:
                 logging.error('ERR121: MQTT client connection timeout')
                 err = err + "E121; "
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake("150", "mem")
                 attempts += 1
                 continue
             
@@ -271,7 +271,7 @@ class LogiConnect:
                 logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
                 err = err + "E125; "
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake("150", "mem")
                 attempts += 1
 
             ### Clean Kill Error
