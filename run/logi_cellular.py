@@ -425,7 +425,8 @@ class LogiConnect:
                     err = err + "E117; "
             
                 ### Subscribe to MQTT Topics
-                #self.myAWSIoTMQTTClient.subscribe("topic/devices/cast", 0, myCallbackContainer.messagePrint)
+                #mstr_topic = 'logi/master/%s'%(mqtt.thingName)
+                #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, myCallbackContainer.messagePrint)
 
                 ### Timestamp 
                 timestamp = time.time()
