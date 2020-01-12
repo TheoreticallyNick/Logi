@@ -43,6 +43,11 @@ class LogiConnect:
     def __init__(self):
         self.schema = 'schema_1_2'
     
+    def get_ping(self):
+        hostname = "google.com"
+        response = os.system("ping -c 1 " + hostname)
+        logging.info('Ping Response -> %s', response)
+
     def light_loop(self, lightObj):
         t = threading.currentThread()
         while getattr(t, "do_run", True):
@@ -282,8 +287,8 @@ class LogiConnect:
     
     def get_ntp(self, server):
         
-        hostname = "google.com"
-        response = os.system("ping -c 1 " + hostname)
+        self.get_ping()
+
         try:
             ntpDate = None
             client = ntplib.NTPClient()
@@ -378,14 +383,14 @@ class LogiConnect:
             try:
                 ### Start cycle
                 logging.info('###---------- Starting Cycle Number: %i ----------###', cycle_cnt)
-                led_red = CommandLED("P8_8")
+                led_red = CommandLED("P8_7")
                 led_red.lightOn()
                 
                 ### Start Connection Process
                 cloud, err = self.connect_cycle(cycle_cnt)
 
                 ### Turn on blue light
-                led_blu = CommandLED("P8_7")
+                led_blu = CommandLED("P8_8")
                 led_blu.lightOn()
         
                 ### Calibrate the System Time
@@ -428,6 +433,9 @@ class LogiConnect:
                 #mstr_topic = 'logi/master/%s'%(mqtt.thingName)
                 #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, myCallbackContainer.messagePrint)
 
+                led_grn = CommandLED("P8_9")
+                led_grn.lightOn()
+                
                 ### Timestamp 
                 timestamp = time.time()
                 timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
@@ -445,16 +453,16 @@ class LogiConnect:
 
                 ### Measure the battery level
                 try:
-                    bat = Battery("P8_9")
+                    bat = Battery("P8_10")
                     if bat.getStatus():
-                        bat_lvl = "okay"
+                        bat_lvl = 85
                     else:
-                        bat_lvl = "low"
+                        bat_lvl = 15
                 
                 except: 
                     logging.error('ERR125: Battery status GPIO error')
                     err = err + "ERR125; "
-                    bat_lvl = "err"
+                    bat_lvl = 999
 
 
                 ### Next Wake Up Time
@@ -470,7 +478,8 @@ class LogiConnect:
                 topic = 'logi/devices/%s'%(mqtt.thingName)
                 logging.info('Topic: %s', topic)
                 logging.info('Published Message: %s', JSONpayload)
-                self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 0)
+                self.get_ping()
+                self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)
                 cycle_cnt = cycle_cnt + 1
 
                 ### Set Subscribe Time Window Here
@@ -483,6 +492,7 @@ class LogiConnect:
                 ### Cycle LED's to OFF
                 led_blu.lightOff()
                 led_red.lightOff()
+                led_grn.lightOff()
                 GPIO.cleanup()
 
                 ### Bash Command to Enter Sleep Cycle

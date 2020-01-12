@@ -7,19 +7,15 @@ class Battery:
         GPIO.setup(self.GPIOpin, GPIO.IN)
 
     def getStatus(self):
-
-        print(GPIO.input(self.GPIOpin))
-
         if GPIO.input(self.GPIOpin):
             return True
         else:
             return False
 
 def main():
+    bat = Battery("P8_10")
 
-    b = Battery("P8_9")
-
-    if b.getStatus():
+    if bat.getStatus():
         print("Battery Okay")
     else:
         print("Battery Low")
