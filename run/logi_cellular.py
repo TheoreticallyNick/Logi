@@ -157,6 +157,7 @@ class LogiConnect:
         while attempts <= 4:
 
             if attempts == 4:
+                self.wake_time = (next(self.sched_cycle))
                 sleep_time = self.sleep_calc(self.wake_time)
                 logging.critical('FATAL ERROR: %s', err)
                 logging.critical('3 attempts made to connect to connect to mqtt client')
@@ -283,6 +284,13 @@ class LogiConnect:
             except NoSuchProcess:
                 pass
 
+            except:
+                logging.error('ERR999: Unknown error, check log')
+                err = err + "E999; "
+                self.clean_kill()
+                self.rtc_wake("150", "mem")
+                attempts += 1
+
         return cloud, err
     
     def get_ntp(self, server):
@@ -390,7 +398,7 @@ class LogiConnect:
                 cloud, err = self.connect_cycle(cycle_cnt)
 
                 ### Turn on blue light
-                led_blu = CommandLED("P8_8")
+                led_blu = CommandLED("P8_11")
                 led_blu.lightOn()
         
                 ### Calibrate the System Time
@@ -406,7 +414,7 @@ class LogiConnect:
                     #logging.info('Previous Schedule: %s', sched)    
                     sched = self.sched_index(sched)   
                     #logging.info('New Schedule: %s', sched)
-                    sched_cycle = cycle(sched)
+                    self.sched_cycle = cycle(sched)
                     self.wake_time = sched[0]
                     logging.info('First Wake time: %s', self.wake_time)
 
@@ -466,7 +474,7 @@ class LogiConnect:
 
 
                 ### Next Wake Up Time
-                self.wake_time = (next(sched_cycle))
+                self.wake_time = (next(self.sched_cycle))
 
                 ### Set the MQTT Message Payload
                 JSONpayload = json.dumps(
@@ -478,7 +486,6 @@ class LogiConnect:
                 topic = 'logi/devices/%s'%(mqtt.thingName)
                 logging.info('Topic: %s', topic)
                 logging.info('Published Message: %s', JSONpayload)
-                self.get_ping()
                 self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)
                 cycle_cnt = cycle_cnt + 1
 

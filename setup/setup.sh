@@ -17,3 +17,4 @@ make install
 python3 -m pip install smbus serial pyserial Adafruit_BBIO AWSIoTPythonSDK xmodem ntplib datetime
 python3 -m pip install hologram-python
 apt-get install ntp
+#cp -f /boot/uEnv.txt ./setup/uEnv.txt
