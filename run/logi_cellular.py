@@ -41,8 +41,9 @@ from PWR import Battery
 class LogiConnect:
 
     def __init__(self):
+        self.mqtt = ConnectMQTTParams()
         self.schema = 'schema_1_2'
-    
+  
     def get_ping(self):
         hostname = "google.com"
         response = os.system("ping -c 1 " + hostname)
@@ -137,8 +138,7 @@ class LogiConnect:
         logging.warning('Soft Rebooting...')
         bashCommand = "sudo rtcwake -u -s %s -m %s"%(rolex, mode)
         logging.info("@bash: %s", bashCommand)
-        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-        output, error = process.communicate()
+        subprocess.check_call(bashCommand.split())
 
         time.sleep(15)
 
@@ -294,8 +294,6 @@ class LogiConnect:
         return cloud, err
     
     def get_ntp(self, server):
-        
-        self.get_ping()
 
         try:
             ntpDate = None
@@ -315,16 +313,14 @@ class LogiConnect:
         logging.warning('Setting HWclock...')
         bashCommand = 'hwclock --set --date %s'%(rolex)
         logging.info("@bash: %s", bashCommand)
-        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-        output, error = process.communicate()
+        subprocess.check_call(bashCommand.split())
 
         time.sleep(3)
 
         logging.warning('Setting System Clock to HWclock...')
         bashCommand = 'hwclock --hctosys'
         logging.info("@bash: %s", bashCommand)
-        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-        output, error = process.communicate()
+        subprocess.check_call(bashCommand.split())
 
         time.sleep(3)
 
@@ -362,24 +358,22 @@ class LogiConnect:
         return new_sched
 
     def main(self):
-        
-        ### Set timezone
-        timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
 
         ### Set up the logger
-        logi_log = "logi_log.log"
+        logi_log = self.mqtt.thingName + "_log.log"
         logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
         logging.getLogger('').addHandler(console)
+        logging.info('--> Logger Successfully Initialized')  
 
         ### Start the program
         logging.info('###---------- Logi Cellular Program Start ----------###')
 
         ### Init MQTT Parameters
         logging.info('Initializing MQTT Connection Parameters...')
-        mqtt = ConnectMQTTParams()
-        self.myAWSIoTMQTTClient = self.init_mqtt(mqtt)
+        
+        self.myAWSIoTMQTTClient = self.init_mqtt(self.mqtt)
 
         ### Schema Version
         logging.info('MQTT Schema: %s', self.schema) 
@@ -478,18 +472,16 @@ class LogiConnect:
 
                 ### Set the MQTT Message Payload
                 JSONpayload = json.dumps(
-                    {'id': mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
+                    {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
                     'schem': self.schema, 'wake': self.wake_time, 'cyc': str(cycle_cnt), 'err': err, 
                     'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
 
                 ### Publish to MQTT Broker
-                topic = 'logi/devices/%s'%(mqtt.thingName)
+                topic = 'logi/devices/%s'%(self.mqtt.thingName)
                 logging.info('Topic: %s', topic)
                 logging.info('Published Message: %s', JSONpayload)
                 self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)
                 cycle_cnt = cycle_cnt + 1
-
-                ### Set Subscribe Time Window Here
                 
                 ### Kill all open PPP connections and processes
                 logging.info('Killing all PPP connections...')
@@ -499,7 +491,6 @@ class LogiConnect:
                 ### Cycle LED's to OFF
                 led_blu.lightOff()
                 led_red.lightOff()
-                led_grn.lightOff()
                 GPIO.cleanup()
 
                 ### Bash Command to Enter Sleep Cycle
@@ -514,6 +505,7 @@ class LogiConnect:
         ### Turn Off LED and Clean Up GPIO Before Exiting
         led_blu.lightOff()
         led_red.lightOff()
+        led_grn.lightOff()
         
         GPIO.cleanup()
         logging.info('\n Program Terminated')
