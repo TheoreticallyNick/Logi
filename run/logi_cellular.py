@@ -19,7 +19,7 @@ from Exceptions.HologramError import NetworkError, PPPError, SerialError, Hologr
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
-from AWSIoTPythonSDK.exception.AWSIoTExceptions import connectTimeoutException
+from AWSIoTPythonSDK.exception.AWSIoTExceptions import *
 from LED import CommandLED
 from AD8 import Thermocouple
 from PX3 import Pressure
@@ -41,28 +41,37 @@ from PWR import Battery
 class LogiConnect:
 
     def __init__(self):
+        '''
+        LogiConnect Constructor
+        '''
+
         self.mqtt = ConnectMQTTParams()
         self.schema = 'schema_1_2'
   
     def get_ping(self):
-        hostname = "google.com"
-        response = os.system("ping -c 1 " + hostname)
+        '''
+        Function: pings the google server
+        '''
+
+        hostname = 'google.com'
+        response = os.system('ping -c 1 ' + hostname)
         logging.info('Ping Response -> %s', response)
 
-    def light_loop(self, lightObj):
-        t = threading.currentThread()
-        while getattr(t, "do_run", True):
-            lightObj.lightHeart()
-
     def time_split(self, time_str):
-
+        '''
+        Function: splits the time string into hour and minute integers
+        '''
+        
         hr = int(time_str[0:2])
         mn = int(time_str[2:])
         
         return hr, mn
 
     def sleep_calc(self, time_str):
-
+        '''
+        Function: calculates the sleeping time in seconds between now and next scheduled wake up
+        '''
+        
         hr, mn = self.time_split(time_str)
 
         now = datetime.today()
@@ -78,6 +87,10 @@ class LogiConnect:
         return sec
 
     def init_mqtt(self, mqtt):
+        '''
+        Function: initializes the MQTT parameters
+        '''
+        
         ### Initializes all parameters and keys for the MQTT broker connection
         self.myAWSIoTMQTTClient = None
 
@@ -88,17 +101,20 @@ class LogiConnect:
             self.myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
             self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
             self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
-            myCallbackContainer = CallbackContainer(self.myAWSIoTMQTTClient)
+            self.myCallbackContainer = CallbackContainer(self.myAWSIoTMQTTClient)
             logging.info('--> Successfully Initialized!')
 
         except:
             logging.error('ERR113: Error Initializing MQTT Connection Parameters')
             os._exit(1)
         
-        return self.myAWSIoTMQTTClient
+        return self.myAWSIoTMQTTClient, self.myCallbackContainer
 
     def clean_kill(self):
-        ### Turns off and destroys all PPP sessions to the cellular network
+        '''
+        Function: Turns off and destroys all PPP sessions to the cellular network
+        '''
+
         logging.info('Disconnecting All Sessions...')
 
         for proc in psutil.process_iter():
@@ -114,12 +130,12 @@ class LogiConnect:
                 print(self.kill_proc_tree(pinfo['pid']))
 
     def kill_proc_tree(self, pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
-        """Kill a process tree (including grandchildren) with signal
-        "sig" and return a (gone, still_alive) tuple.
-        "on_terminate", if specified, is a callabck function which is
-        called as soon as a child terminates.
-        """
-        assert pid != os.getpid(), "won't kill myself"
+        '''
+        Function: kills an entire process tree (including grandchildren) with signal 'sig' and return a (gone, still_alive) tuple.
+        'on_terminate', if specified, is a callabck function which is called as soon as a child terminates.
+        '''
+
+        assert pid != os.getpid(), 'won't kill myself'
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
         
@@ -134,15 +150,21 @@ class LogiConnect:
         return (gone, alive)
 
     def rtc_wake(self, rolex, mode):
+        '''
+        Function: puts the device in sleep mode for defined period of time
+        '''
         
         logging.warning('Soft Rebooting...')
-        bashCommand = "sudo rtcwake -u -s %s -m %s"%(rolex, mode)
-        logging.info("@bash: %s", bashCommand)
+        bashCommand = 'sudo rtcwake -u -s %s -m %s'%(rolex, mode)
+        logging.info('@bash: %s', bashCommand)
         subprocess.check_call(bashCommand.split())
 
         time.sleep(15)
 
     def antenna_cycle(self, cloud):
+        '''
+        Function: cycles the antenna on/off and increases connection reliability
+        '''
         
         logging.info('Cycling the radio antenna...')
         cloud.network.modem.radio_power(False)
@@ -151,8 +173,12 @@ class LogiConnect:
         time.sleep(5)
 
     def connect_cycle(self, cyc):
+        '''
+        Function: cellular connection cycle
+        '''
+
         attempts = 1
-        err = ""
+        err = ''
 
         while attempts <= 4:
 
@@ -163,7 +189,7 @@ class LogiConnect:
                 logging.critical('3 attempts made to connect to connect to mqtt client')
                 logging.critical('Sleeping until next cycle...')
                 logging.info('Wake up time: %s', self.wake_time)
-                self.rtc_wake(str(sleep_time), "mem")
+                self.rtc_wake(str(sleep_time), 'mem')
                 attempts = 1
                 continue
 
@@ -186,10 +212,10 @@ class LogiConnect:
                 connect_result = cloud.network.connect()
                 if connect_result == False:
                     logging.error('ERR107: Could not connect to cellular network - modem hangup')
-                    err = err + "E107; "
+                    err = err + 'E107; '
                     attempts += 1
                     self.clean_kill()
-                    self.rtc_wake("150", "mem")
+                    self.rtc_wake('150', 'mem')
                     continue
                 else:
                     logging.info('--> Successfully Connected to Cell Network')
@@ -206,10 +232,10 @@ class LogiConnect:
                 mqtt_result = self.myAWSIoTMQTTClient.connect()
                 if mqtt_result == False: 
                     logging.error('ERR111: Could not Connect to MQTT Client')
-                    err = err + "E111; "
+                    err = err + 'E111; '
                     attempts += 1
                     self.clean_kill()
-                    self.rtc_wake("150", "mem")
+                    self.rtc_wake('150', 'mem')
                     continue
                 else: 
                     logging.info('--> Successfully Connected to MQTT Client')
@@ -221,63 +247,63 @@ class LogiConnect:
             ### Cloud Object Error
             except NetworkError:
                 logging.error('ERR101: Could not find modem')
-                err = err + "E101; "
+                err = err + 'E101; '
                 self.clean_kill()
-                self.rtc_wake("15", "mem")
+                self.rtc_wake('15', 'mem')
                 attempts += 1
                 continue
 
             ### Cloud Object Error
             except SerialError:
                 logging.error('ERR103: Could not find usable serial port')
-                err = err + "E103; "
+                err = err + 'E103; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
                 continue
             
             ### Cellular Connection Error
             except PPPError:
                 logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
-                err = err + "E105; "
+                err = err + 'E105; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
                 continue
 
             ### Cellular Connection Error    
             except SerialException:
                 logging.error('ERR123: Modem reports readiness but returns no data')
-                err = err + "E123; "
+                err = err + 'E123; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
                 continue
 
             ### DNS Server Connection Error
             except gaierror:
                 logging.error('ERR109: Temporary failure in DNS server name resolution')
-                err = err + "E109; "
+                err = err + 'E109; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
                 continue
             
             ### MQTT Connection Error
             except connectTimeoutException:
                 logging.error('ERR121: MQTT client connection timeout')
-                err = err + "E121; "
+                err = err + 'E121; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
                 continue
             
             ### MQTT Connection Error
             except SSLCertVerificationError:
                 logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
-                err = err + "E125; "
+                err = err + 'E125; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
 
             ### Clean Kill Error
@@ -286,14 +312,17 @@ class LogiConnect:
 
             except:
                 logging.error('ERR999: Unknown error, check log')
-                err = err + "E999; "
+                err = err + 'E999; '
                 self.clean_kill()
-                self.rtc_wake("150", "mem")
+                self.rtc_wake('150', 'mem')
                 attempts += 1
 
         return cloud, err
     
     def get_ntp(self, server):
+        '''
+        Function: returns time based on the NTP server
+        '''
 
         try:
             ntpDate = None
@@ -309,22 +338,29 @@ class LogiConnect:
         return ntpDate
 
     def set_time(self, rolex):
+        '''
+        Function: sets the hwclock and sysclock based on ntp time, avoids SSL certificate errors
+        '''
 
         logging.warning('Setting HWclock...')
         bashCommand = 'hwclock --set --date %s'%(rolex)
-        logging.info("@bash: %s", bashCommand)
+        logging.info('@bash: %s', bashCommand)
         subprocess.check_call(bashCommand.split())
 
         time.sleep(3)
 
         logging.warning('Setting System Clock to HWclock...')
         bashCommand = 'hwclock --hctosys'
-        logging.info("@bash: %s", bashCommand)
+        logging.info('@bash: %s', bashCommand)
         subprocess.check_call(bashCommand.split())
 
         time.sleep(3)
 
     def time_now_str(self):
+        '''
+        Function: converts the time now into a string
+        '''
+
         now = datetime.now()
         hr_now = str(now.hour)
         if len(hr_now) < 2:
@@ -339,6 +375,10 @@ class LogiConnect:
         return time_now
 
     def sched_index(self, sched):
+        '''
+        Function: sets the schedule index to the next scheduled time (instead of starting from index 0)
+        '''
+
         now = self.time_now_str()
         post = []
         pre = []
@@ -357,10 +397,44 @@ class LogiConnect:
         
         return new_sched
 
+    def publish_mqtt(self, JSONpayload):
+        '''
+        Function: handles publishing message to MQTT broker
+        '''
+
+        attempts = 1
+        err = ''
+        
+        while attempts <= 4:
+
+            if attempts == 4:
+                logging.critical('FATAL ERROR: %s', err)
+                logging.critical('3 attempts made to publish to MQTT broker')
+                logging.critical('Skipping MQTT publish cycle')
+                val = False
+                break
+
+            try:
+                ### Publish to MQTT Broker
+                topic = 'logi/devices/%s'%(self.mqtt.thingName)
+                logging.info('Topic: %s', topic)
+                logging.info('Published Message: %s', JSONpayload)
+                self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)  
+                val = True      
+
+            except:
+                logging.error('ERR127: Publish Timeout Exception')
+                err = err + 'E127; '
+                attempts += 1
+                time.sleep(15)
+                continue
+                         
+        return val, err
+    
     def main(self):
 
         ### Set up the logger
-        logi_log = self.mqtt.thingName + "_log.log"
+        logi_log = self.mqtt.thingName + '_log.log'
         logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
@@ -373,26 +447,29 @@ class LogiConnect:
         ### Init MQTT Parameters
         logging.info('Initializing MQTT Connection Parameters...')
         
-        self.myAWSIoTMQTTClient = self.init_mqtt(self.mqtt)
+        self.myAWSIoTMQTTClient, self.callBackContainer = self.init_mqtt(self.mqtt)
 
         ### Schema Version
         logging.info('MQTT Schema: %s', self.schema) 
 
         cycle_cnt = 1
+        err = ''
                 
         while True:
 
             try:
                 ### Start cycle
                 logging.info('###---------- Starting Cycle Number: %i ----------###', cycle_cnt)
-                led_red = CommandLED("P8_7")
+                led_red = CommandLED('P8_7')
                 led_red.lightOn()
                 
                 ### Start Connection Process
-                cloud, err = self.connect_cycle(cycle_cnt)
+                cloud, errx = self.connect_cycle(cycle_cnt)
+
+                err = err + errx
 
                 ### Turn on blue light
-                led_blu = CommandLED("P8_11")
+                led_blu = CommandLED('P8_11')
                 led_blu.lightOn()
         
                 ### Calibrate the System Time
@@ -416,31 +493,31 @@ class LogiConnect:
                 logging.info('Initialing Board I/O...')
                 try: 
                     ADC.setup()
-                    lev     = FluidLevel("P9_39")
+                    lev     = FluidLevel('P9_39')
                     mpl     = MPL3115A2()
                     logging.info('--> Successfully Initialized I/O')
                 except:
                     logging.error('ERR115: Error initializing board I/O')
-                    err = err + "E115; "
+                    err = err + 'E115; '
 
                 ### Record the RSSI
                 try: 
                     rssi = cloud.network.signal_strength
                 except:
                     logging.error('ERR117: Error getting RSSI values')
-                    rssi = "err"
-                    err = err + "E117; "
+                    rssi = 'err'
+                    err = err + 'E117; '
             
                 ### Subscribe to MQTT Topics
                 #mstr_topic = 'logi/master/%s'%(mqtt.thingName)
                 #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, myCallbackContainer.messagePrint)
 
-                led_grn = CommandLED("P8_9")
+                led_grn = CommandLED('P8_9')
                 led_grn.lightOn()
                 
                 ### Timestamp 
                 timestamp = time.time()
-                timelocal = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+                timelocal = time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime())
                 
                 ### Get Temperature Data from MPL
                 try:
@@ -450,12 +527,12 @@ class LogiConnect:
 
                 except:
                     logging.error('ERR119: I2C bus error')
-                    err = err + "E119; "
+                    err = err + 'E119; '
                     mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
                 ### Measure the battery level
                 try:
-                    bat = Battery("P8_10")
+                    bat = Battery('P8_10')
                     if bat.getStatus():
                         bat_lvl = 85
                     else:
@@ -463,7 +540,7 @@ class LogiConnect:
                 
                 except: 
                     logging.error('ERR125: Battery status GPIO error')
-                    err = err + "ERR125; "
+                    err = err + 'ERR125; '
                     bat_lvl = 999
 
 
@@ -477,10 +554,9 @@ class LogiConnect:
                     'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
 
                 ### Publish to MQTT Broker
-                topic = 'logi/devices/%s'%(self.mqtt.thingName)
-                logging.info('Topic: %s', topic)
-                logging.info('Published Message: %s', JSONpayload)
-                self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)
+                if self.publish_mqtt(JSONpayload):
+                    err = ''
+
                 cycle_cnt = cycle_cnt + 1
                 
                 ### Kill all open PPP connections and processes
@@ -497,7 +573,7 @@ class LogiConnect:
                 logging.info('Wake up time: %s', self.wake_time)
                 sleep_time = self.sleep_calc(self.wake_time)
                 logging.info('Sleep time in sec: %s', str(sleep_time))
-                self.rtc_wake(str(sleep_time), "mem")
+                self.rtc_wake(str(sleep_time), 'mem')
         
             except KeyboardInterrupt:
                 pass
@@ -512,6 +588,6 @@ class LogiConnect:
 
         os._exit(1)
         
-if __name__=="__main__":
+if __name__=='__main__':
     logi_run = LogiConnect()
     logi_run.main()

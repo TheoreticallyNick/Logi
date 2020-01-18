@@ -45,3 +45,4 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR121 - MQTT Connection Timeout
     ERR123 - Modem reports readiness but returns no data
     ERR125 - Battery status GPIO error
+    ERR127 - Publish Timeout Exception
