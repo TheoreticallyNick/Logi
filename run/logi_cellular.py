@@ -20,7 +20,7 @@ from Exceptions.HologramError import NetworkError, PPPError, SerialError, Hologr
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
-from AWSIoTPythonSDK.exception.AWSIoTExceptions import *
+from AWSIoTPythonSDK.exception.AWSIoTExceptions import publishTimeoutException
 from LED import CommandLED
 from AD8 import Thermocouple
 from PX3 import Pressure
@@ -131,7 +131,7 @@ class LogiConnect:
 
             except Exception as e:
                 logging.error('ERR133: Failed to kill pid processes')
-                errx = 'E133; ' + str(e.args)
+                errx = 'E133; ' + str(e)
                 raise Exception(errx)  
             
     def kill_proc_tree(self, pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
@@ -264,40 +264,25 @@ class LogiConnect:
         
         return new_sched
 
-    def publish_mqtt(self, JSONpayload):
+    def publish_mqtt(self, JSONpayload, myAWSIoTMQTTClient):
         '''
         Function: handles publishing message to MQTT broker
         '''
+        try:
+            topic = 'logi/devices/%s'%(self.mqtt.thingName)
+            logging.info('Topic: %s', topic)
+            logging.info('Published Message: %s', JSONpayload)
+            myAWSIoTMQTTClient.publishAsync(topic, JSONpayload, 1)    
 
-        attempts = 1
-        err = ''
-        
-        while attempts <= 4:
+        except publishTimeoutException:
+            logging.error('ERR127: Publish Timeout Exception')
+            errx = 'E127; '
+            raise Exception(errx)
 
-            if attempts == 4:
-                logging.critical('FATAL ERROR: %s', err)
-                logging.critical('3 attempts made to publish to MQTT broker')
-                logging.critical('Skipping MQTT publish cycle')
-                val = False
-                break
-
-            try:
-                ### Publish to MQTT Broker
-                topic = 'logi/devices/%s'%(self.mqtt.thingName)
-                logging.info('Topic: %s', topic)
-                logging.info('Published Message: %s', JSONpayload)
-                self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)  
-                val = True    
-                break  
-
-            except:
-                logging.error('ERR127: Publish Timeout Exception')
-                err = err + 'E127; '
-                attempts += 1
-                time.sleep(15)
-                continue
-                         
-        return val, err
+        except:
+            logging.error('ERR139: MQTT publish error')
+            errx = 'E139; '
+            raise Exception(errx)
 
     def create_cloud(self):
         '''
@@ -431,8 +416,8 @@ class LogiConnect:
         ### Schema Version
         logging.info('MQTT Schema: %s', self.schema) 
 
-        logging.info('Initial connect check...')
-        
+        ### Connection Cycle
+        logging.info('Initial connection check...')
         while True:
             try:
                 cloud = self.create_cloud()
@@ -441,15 +426,15 @@ class LogiConnect:
                 break
 
             except Exception as e:
-                self.err = self.err + str(e.args)
+                self.err = self.err + str(e)
                 self.rtc_wake('10', 'mem')
                 
                 try:
                     self.clean_kill()
                 except Exception as e:
-                    self.err = self.err + str(e.args)
+                    self.err = self.err + str(e)
                     pass
-                
+
                 continue
 
             
@@ -486,35 +471,51 @@ class LogiConnect:
             
             ### Start Connection Process
             att = 1
-            while att <= 4:
+            while True:
 
                 if att == 4:
                     self.skip_cycle()
                     att = 1
                     continue
-
-                try:
-
-                    try:
-                        self.clean_kill()
-                    except Exception as e:
-                        self.err = self.err + str(e.args)
-                        pass
-
-                    cloud = self.create_cloud()
-                    self.antenna_cycle(cloud)
-                    self.cell_connect(cloud)
-                    self.mqtt_connect(myAWSIoTMQTTClient)
-                    break
-
-                except Exception as e:
-                    self.err = self.err + str(e.args)
-                    logging.info('Connection Cycle unsuccessful, rebooting...')
-                    self.rtc_wake('10', 'mem')
-                    att += 1
-                    continue
-
                 
+                if self.cycle_cnt != 1: 
+                    try:
+                        cloud = self.create_cloud()
+                        self.antenna_cycle(cloud)
+                        self.cell_connect(cloud)
+                        self.mqtt_connect(myAWSIoTMQTTClient)
+                        break
+
+                    except Exception as e:
+                        self.err = self.err + str(e)
+                        logging.info('Connection Cycle unsuccessful, rebooting...')
+                        try:
+                            self.clean_kill()
+                        except Exception as e:
+                            self.err = self.err + str(e)
+                            pass
+                        att += 1
+                        self.rtc_wake('10', 'mem')
+                        continue
+
+                else:
+                    try:
+                        self.mqtt_connect(myAWSIoTMQTTClient)
+                        break
+
+                    except Exception as e:
+                        self.err = self.err + str(e)
+                        logging.info('Connection Cycle unsuccessful, rebooting...')
+                        try:
+                            self.clean_kill()
+                        except Exception as e:
+                            self.err = self.err + str(e)
+                            pass
+                        att += 1
+                        self.cycle_cnt += 1
+                        self.rtc_wake('10', 'mem')
+                        continue
+
             ### Record the RSSI
             try: 
                 rssi = cloud.network.signal_strength
@@ -564,15 +565,18 @@ class LogiConnect:
                 'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
 
             ### Publish to MQTT Broker
-            if self.publish_mqtt(JSONpayload):
+            if self.publish_mqtt(JSONpayload, myAWSIoTMQTTClient):
                 self.err = ''
 
             self.cycle_cnt = self.cycle_cnt + 1
             
             ### Kill all open PPP connections and processes
             logging.info('Killing all PPP connections...')
-            self.clean_kill()
-            time.sleep(5)
+            try:
+                self.clean_kill()
+            except Exception as e:
+                self.err = self.err + str(e)
+                pass
             
             ### Cycle LED's to OFF
             led_red.lightOff()
