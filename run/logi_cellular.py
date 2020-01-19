@@ -1,3 +1,4 @@
+#!/bin/bash
 import sys, os, signal
 sys.path.append('/home/debian/Desktop/Logi/controls/')
 sys.path.append('/home/debian/Desktop/keys/')
@@ -121,21 +122,26 @@ class LogiConnect:
 
             try:
                 pinfo = proc.as_dict(attrs=['pid', 'name'])
-            except:
-                raise HologramError('Failed to check for existing PPP sessions')
-            if 'pppd' in pinfo['name']:
-                print('Found existing PPP session on pid: %s' % pinfo['pid'])
-                print('Killing pid %s now' % pinfo['pid'])
-                psutil.Process(pinfo['pid']).kill()
-                print(self.kill_proc_tree(pinfo['pid']))
 
+                if 'pppd' in pinfo['name']:
+                    logging.info('Found existing PPP session on pid: %s', pinfo['pid'])
+                    logging.info('Killing pid %s now', pinfo['pid'])
+                    psutil.Process(pinfo['pid']).kill()
+                    self.kill_proc_tree(pinfo['pid'])
+
+            except:
+                logging.error('ERR133: Failed to kill pid processes')
+                self.err = self.err + 'E133; '
+                raise
+            
     def kill_proc_tree(self, pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
         '''
         Function: kills an entire process tree (including grandchildren) with signal 'sig' and return a (gone, still_alive) tuple.
         'on_terminate', if specified, is a callabck function which is called as soon as a child terminates.
         '''
 
-        assert pid != os.getpid(), 'won't kill myself'
+        assert pid != os.getpid(), 'wont kill myself'
+        
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
         
@@ -157,167 +163,20 @@ class LogiConnect:
         logging.warning('Soft Rebooting...')
         bashCommand = 'sudo rtcwake -u -s %s -m %s'%(rolex, mode)
         logging.info('@bash: %s', bashCommand)
-        subprocess.check_call(bashCommand.split())
+        subprocess.call(bashCommand, shell=True)
 
         time.sleep(15)
 
-    def antenna_cycle(self, cloud):
+    def antenna_cycle(self):
         '''
         Function: cycles the antenna on/off and increases connection reliability
         '''
         
         logging.info('Cycling the radio antenna...')
-        cloud.network.modem.radio_power(False)
+        self.cloud.network.modem.radio_power(False)
         time.sleep(5)
-        cloud.network.modem.radio_power(True)
+        self.cloud.network.modem.radio_power(True)
         time.sleep(5)
-
-    def connect_cycle(self, cyc):
-        '''
-        Function: cellular connection cycle
-        '''
-
-        attempts = 1
-        err = ''
-
-        while attempts <= 4:
-
-            if attempts == 4:
-                self.wake_time = (next(self.sched_cycle))
-                sleep_time = self.sleep_calc(self.wake_time)
-                logging.critical('FATAL ERROR: %s', err)
-                logging.critical('3 attempts made to connect to connect to mqtt client')
-                logging.critical('Sleeping until next cycle...')
-                logging.info('Wake up time: %s', self.wake_time)
-                self.rtc_wake(str(sleep_time), 'mem')
-                attempts = 1
-                continue
-
-            cloud = None
-            logging.info('- Connection Cycle Attempt %i -', attempts)
-
-            try:
-                self.clean_kill()
-
-                ### Init Cloud Object
-                logging.info('Connecting to on-board modem and building new cloud object...')
-                cloud = CustomCloud(None, network='cellular')
-                logging.info('--> Successfully found USB Modem') 
-
-                ### Cycle the Antenna
-                self.antenna_cycle(cloud)
-                
-                ### Connect to Cellular Network
-                logging.info('Connecting to Cellular Network...')
-                connect_result = cloud.network.connect()
-                if connect_result == False:
-                    logging.error('ERR107: Could not connect to cellular network - modem hangup')
-                    err = err + 'E107; '
-                    attempts += 1
-                    self.clean_kill()
-                    self.rtc_wake('150', 'mem')
-                    continue
-                else:
-                    logging.info('--> Successfully Connected to Cell Network')
-
-                time.sleep(10)
-
-                if cyc == 1:
-                    rolex = self.get_ntp('0.debian.pool.ntp.org')
-                    logging.info('UTC Time: %s', rolex)
-                    self.set_time(rolex)
-
-                ### Connect to MQTT Client
-                logging.info('Connecting to MQTT...')
-                mqtt_result = self.myAWSIoTMQTTClient.connect()
-                if mqtt_result == False: 
-                    logging.error('ERR111: Could not Connect to MQTT Client')
-                    err = err + 'E111; '
-                    attempts += 1
-                    self.clean_kill()
-                    self.rtc_wake('150', 'mem')
-                    continue
-                else: 
-                    logging.info('--> Successfully Connected to MQTT Client')
-
-                time.sleep(10)
-                
-                break
-
-            ### Cloud Object Error
-            except NetworkError:
-                logging.error('ERR101: Could not find modem')
-                err = err + 'E101; '
-                self.clean_kill()
-                self.rtc_wake('15', 'mem')
-                attempts += 1
-                continue
-
-            ### Cloud Object Error
-            except SerialError:
-                logging.error('ERR103: Could not find usable serial port')
-                err = err + 'E103; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-                continue
-            
-            ### Cellular Connection Error
-            except PPPError:
-                logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
-                err = err + 'E105; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-                continue
-
-            ### Cellular Connection Error    
-            except SerialException:
-                logging.error('ERR123: Modem reports readiness but returns no data')
-                err = err + 'E123; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-                continue
-
-            ### DNS Server Connection Error
-            except gaierror:
-                logging.error('ERR109: Temporary failure in DNS server name resolution')
-                err = err + 'E109; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-                continue
-            
-            ### MQTT Connection Error
-            except connectTimeoutException:
-                logging.error('ERR121: MQTT client connection timeout')
-                err = err + 'E121; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-                continue
-            
-            ### MQTT Connection Error
-            except SSLCertVerificationError:
-                logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
-                err = err + 'E125; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-
-            ### Clean Kill Error
-            except NoSuchProcess:
-                pass
-
-            except:
-                logging.error('ERR999: Unknown error, check log')
-                err = err + 'E999; '
-                self.clean_kill()
-                self.rtc_wake('150', 'mem')
-                attempts += 1
-
-        return cloud, err
     
     def get_ntp(self, server):
         '''
@@ -332,9 +191,11 @@ class LogiConnect:
             ntpDate = ctime(response.tx_time)
             logging.info('UTC Server Time is: %s', ntpDate)
         
-        except Exception as e:
-            print(e)
-        
+        except:
+            logging.error('ERR135: NTP server error')
+            self.err = self.err + 'E135; '
+            raise
+
         return ntpDate
 
     def set_time(self, rolex):
@@ -343,16 +204,16 @@ class LogiConnect:
         '''
 
         logging.warning('Setting HWclock...')
-        bashCommand = 'hwclock --set --date %s'%(rolex)
+        bashCommand = 'hwclock --set --date "%s"'%(rolex)
         logging.info('@bash: %s', bashCommand)
-        subprocess.check_call(bashCommand.split())
+        subprocess.call(bashCommand, shell=True)
 
         time.sleep(3)
 
         logging.warning('Setting System Clock to HWclock...')
         bashCommand = 'hwclock --hctosys'
         logging.info('@bash: %s', bashCommand)
-        subprocess.check_call(bashCommand.split())
+        subprocess.call(bashCommand, shell=True)
 
         time.sleep(3)
 
@@ -420,7 +281,8 @@ class LogiConnect:
                 logging.info('Topic: %s', topic)
                 logging.info('Published Message: %s', JSONpayload)
                 self.myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)  
-                val = True      
+                val = True    
+                break  
 
             except:
                 logging.error('ERR127: Publish Timeout Exception')
@@ -430,6 +292,117 @@ class LogiConnect:
                 continue
                          
         return val, err
+    
+    def create_cloud(self):
+        '''
+        Function: initializes cloud object
+        '''
+
+        self.cloud = None
+        logging.info('Connecting to on-board modem and building new cloud object...')
+        try:
+            self.cloud = CustomCloud(None, network='cellular')
+
+        except NetworkError:
+            logging.error('ERR101: Could not find modem')
+            self.err = self.err + 'E101; '
+            return False
+
+        except SerialError:
+            logging.error('ERR103: Could not find usable serial port')
+            self.err = self.err + 'E103; '
+            return False
+        
+        except:
+            logging.error('ERR129: Cloud object error')
+            self.err = self.err + 'E129; '
+            return False
+        
+        else: 
+            logging.info('--> Successfully found USB Modem & created cloud object') 
+            return True
+
+    def cell_connect(self):
+        '''
+        Function: connects device to cell tower and starts ppp session
+        '''
+
+        logging.info('Connecting to Cellular Network...')
+        try:
+            connect_result = self.cloud.network.connect()
+
+        except PPPError:
+            logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
+            self.err = self.err + 'E105; '
+            return False
+  
+        except SerialException:
+            logging.error('ERR123: Modem reports readiness but returns no data')
+            self.err = self.err + 'E123; '
+            return False
+
+        except:
+            logging.error('ERR131: Cellular connection error')
+            self.err = self.err + 'E131; '
+            return False
+
+        else:
+            if connect_result == False:
+                logging.error('ERR107: Could not connect to cellular network - modem hangup')
+                self.err = self.err + 'E107; '
+                return False
+            
+            else:
+                logging.info('--> Successfully Connected to Cell Network')
+                time.sleep(5)
+                return True
+
+    def mqtt_connect(self):
+        '''
+        Function: connect to MQTT broker
+        '''
+
+        logging.info('Connecting to MQTT...')
+        try:
+            mqtt_result = self.myAWSIoTMQTTClient.connect()
+
+        except gaierror:
+            logging.error('ERR109: Temporary failure in DNS server name resolution')
+            self.err = self.err + 'E109; '
+            return False
+        
+        except connectTimeoutException:
+            logging.error('ERR121: MQTT client connection timeout')
+            self.err = self.err + 'E121; '
+            return False
+
+        except SSLCertVerificationError:
+            logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
+            self.err = self.err + 'E125; '
+            return False
+
+        else:
+            if mqtt_result == False: 
+                logging.error('ERR111: Could not Connect to MQTT Client')
+                self.err = self.err + 'E111; '
+                return False
+            else: 
+                logging.info('--> Successfully Connected to MQTT Client')
+                time.sleep(5)
+                return True
+        
+    def skip_cycle(self):
+        '''
+        Function: skips mqtt publish and enters sleep cycle
+        '''
+
+        self.wake_time = (next(self.sched_cycle))
+        sleep_time = self.sleep_calc(self.wake_time)
+        logging.critical('FATAL ERROR: %s', self.err)
+        logging.critical('3 attempts made to connect to connect to mqtt client')
+        logging.critical('Sleeping until next cycle...')
+        logging.info('Wake up time: %s', self.wake_time)
+        self.rtc_wake(str(sleep_time), 'mem')
     
     def main(self):
 
@@ -443,150 +416,149 @@ class LogiConnect:
 
         ### Start the program
         logging.info('###---------- Logi Cellular Program Start ----------###')
-
-        ### Init MQTT Parameters
-        logging.info('Initializing MQTT Connection Parameters...')
         
         self.myAWSIoTMQTTClient, self.callBackContainer = self.init_mqtt(self.mqtt)
 
         ### Schema Version
         logging.info('MQTT Schema: %s', self.schema) 
 
-        cycle_cnt = 1
-        err = ''
+        self.cycle_cnt = 1
+        self.err = ''
+
+        logging.info('Initial connect check...')
+        
+        self.create_cloud()
+        self.antenna_cycle()
+        self.cell_connect()
+        
+        ### Calibrate system clock
+        logging.info('Calibrating system clock...')
+        rolex = self.get_ntp('1.debian.pool.ntp.org')
+        logging.info('UTC Time: %s', rolex)
+        self.set_time(rolex)
+
+        ### Set sleep schedule
+        sched = [] 
+        f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
+        sched = f.read().split(',')
+        f.close()
+        sched = self.sched_index(sched)   
+        self.sched_cycle = cycle(sched)
+        self.wake_time = sched[0]
+
+        ### Init Board I/O
+        logging.info('Initialing Board I/O...')
+        try: 
+            ADC.setup()
+            lev     = FluidLevel('P9_39')
+            mpl     = MPL3115A2()
+            logging.info('--> Successfully Initialized I/O')
+        except:
+            logging.error('ERR115: Error initializing board I/O')
+            self.err = self.err + 'E115; '
                 
         while True:
 
-            try:
-                ### Start cycle
-                logging.info('###---------- Starting Cycle Number: %i ----------###', cycle_cnt)
-                led_red = CommandLED('P8_7')
-                led_red.lightOn()
-                
-                ### Start Connection Process
-                cloud, errx = self.connect_cycle(cycle_cnt)
-
-                err = err + errx
-
-                ### Turn on blue light
-                led_blu = CommandLED('P8_11')
-                led_blu.lightOn()
-        
-                ### Calibrate the System Time
-                if cycle_cnt == 1:
-                    
-                    ### Set sleep schedule
-                    sched = []      # empty schedule list
-
-                    f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
-                    sched = f.read().split(',')
-                    f.close()
-
-                    #logging.info('Previous Schedule: %s', sched)    
-                    sched = self.sched_index(sched)   
-                    #logging.info('New Schedule: %s', sched)
-                    self.sched_cycle = cycle(sched)
-                    self.wake_time = sched[0]
-                    logging.info('First Wake time: %s', self.wake_time)
-
-                ### Init Board I/O
-                logging.info('Initialing Board I/O...')
-                try: 
-                    ADC.setup()
-                    lev     = FluidLevel('P9_39')
-                    mpl     = MPL3115A2()
-                    logging.info('--> Successfully Initialized I/O')
-                except:
-                    logging.error('ERR115: Error initializing board I/O')
-                    err = err + 'E115; '
-
-                ### Record the RSSI
-                try: 
-                    rssi = cloud.network.signal_strength
-                except:
-                    logging.error('ERR117: Error getting RSSI values')
-                    rssi = 'err'
-                    err = err + 'E117; '
+            ### Start cycle
+            logging.info('###---------- Starting Cycle Number: %i ----------###', self.cycle_cnt)
+            led_red = CommandLED('P8_7')
+            led_red.lightOn()
             
-                ### Subscribe to MQTT Topics
-                #mstr_topic = 'logi/master/%s'%(mqtt.thingName)
-                #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, myCallbackContainer.messagePrint)
+            ### Start Connection Process
+            att = 1
+            while att <= 4:
 
-                led_grn = CommandLED('P8_9')
-                led_grn.lightOn()
-                
-                ### Timestamp 
-                timestamp = time.time()
-                timelocal = time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime())
-                
-                ### Get Temperature Data from MPL
-                try:
-                    mpl.control_alt_config()
-                    mpl.data_config()
-                    mplTemp = mpl.read_alt_temp()
+                if att == 4:
+                    self.skip_cycle()
+                    att = 1
+                    continue
 
-                except:
-                    logging.error('ERR119: I2C bus error')
-                    err = err + 'E119; '
-                    mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
-
-                ### Measure the battery level
-                try:
-                    bat = Battery('P8_10')
-                    if bat.getStatus():
-                        bat_lvl = 85
-                    else:
-                        bat_lvl = 15
-                
-                except: 
-                    logging.error('ERR125: Battery status GPIO error')
-                    err = err + 'ERR125; '
-                    bat_lvl = 999
-
-
-                ### Next Wake Up Time
-                self.wake_time = (next(self.sched_cycle))
-
-                ### Set the MQTT Message Payload
-                JSONpayload = json.dumps(
-                    {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                    'schem': self.schema, 'wake': self.wake_time, 'cyc': str(cycle_cnt), 'err': err, 
-                    'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
-
-                ### Publish to MQTT Broker
-                if self.publish_mqtt(JSONpayload):
-                    err = ''
-
-                cycle_cnt = cycle_cnt + 1
-                
-                ### Kill all open PPP connections and processes
-                logging.info('Killing all PPP connections...')
                 self.clean_kill()
-                time.sleep(5)
-                
-                ### Cycle LED's to OFF
-                led_blu.lightOff()
-                led_red.lightOff()
-                GPIO.cleanup()
 
-                ### Bash Command to Enter Sleep Cycle
-                logging.info('Wake up time: %s', self.wake_time)
-                sleep_time = self.sleep_calc(self.wake_time)
-                logging.info('Sleep time in sec: %s', str(sleep_time))
-                self.rtc_wake(str(sleep_time), 'mem')
-        
-            except KeyboardInterrupt:
-                pass
-                
-        ### Turn Off LED and Clean Up GPIO Before Exiting
-        led_blu.lightOff()
-        led_red.lightOff()
-        led_grn.lightOff()
-        
-        GPIO.cleanup()
-        logging.info('\n Program Terminated')
+                if self.create_cloud() is False:
+                    att += 1
+                    continue
 
-        os._exit(1)
+                self.antenna_cycle()
+
+                if self.cell_connect() is False:
+                    att += 1
+                    continue    
+                    
+                if self.mqtt_connect() is False:
+                    att += 1
+                    continue
+
+                break                
+
+            ### Record the RSSI
+            try: 
+                rssi = self.cloud.network.signal_strength
+            except:
+                logging.error('ERR117: Error getting RSSI values')
+                rssi = 'err'
+                self.err = self.err + 'E117; '
+        
+            ### Subscribe to MQTT Topics
+            #mstr_topic = 'logi/master/%s'%(mqtt.thingName)
+            #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, myCallbackContainer.messagePrint)
+            
+            ### Timestamp 
+            timestamp = time.time()
+            timelocal = time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime())
+            
+            ### Get Temperature Data from MPL
+            try:
+                mpl.control_alt_config()
+                mpl.data_config()
+                mplTemp = mpl.read_alt_temp()
+            except:
+                logging.error('ERR119: I2C bus error')
+                self.err = self.err + 'E119; '
+                mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
+
+            ### Measure the battery level
+            try:
+                bat = Battery('P8_10')
+                if bat.getStatus():
+                    bat_lvl = 85
+                else:
+                    bat_lvl = 15
+            except: 
+                logging.error('ERR125: Battery status GPIO error')
+                self.err = self.err + 'ERR125; '
+                bat_lvl = 999
+
+
+            ### Next Wake Up Time
+            self.wake_time = (next(self.sched_cycle))
+
+            ### Set the MQTT Message Payload
+            JSONpayload = json.dumps(
+                {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
+                'schem': self.schema, 'wake': self.wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
+                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
+
+            ### Publish to MQTT Broker
+            if self.publish_mqtt(JSONpayload):
+                err = ''
+
+            self.cycle_cnt = self.cycle_cnt + 1
+            
+            ### Kill all open PPP connections and processes
+            logging.info('Killing all PPP connections...')
+            self.clean_kill()
+            time.sleep(5)
+            
+            ### Cycle LED's to OFF
+            led_red.lightOff()
+            GPIO.cleanup()
+
+            ### Bash Command to Enter Sleep Cycle
+            logging.info('Wake up time: %s', self.wake_time)
+            sleep_time = self.sleep_calc(self.wake_time)
+            logging.info('Sleep time in sec: %s', str(sleep_time))
+            self.rtc_wake(str(sleep_time), 'mem')
         
 if __name__=='__main__':
     logi_run = LogiConnect()

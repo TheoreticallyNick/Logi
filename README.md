@@ -46,3 +46,7 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR123 - Modem reports readiness but returns no data
     ERR125 - Battery status GPIO error
     ERR127 - Publish Timeout Exception
+    ERR129 - Cloud object error
+    ERR131 - 
+    ERR133 - Failed to kill pid processes
+    ERR135 - NTP server error
