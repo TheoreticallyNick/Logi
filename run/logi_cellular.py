@@ -47,7 +47,8 @@ class LogiConnect:
         '''
         self.mqtt = ConnectMQTTParams()
         self.schema = 'schema_1_2'
-        self.cloud = self.create_cloud()
+        self.err = ''
+        self.cycle_cnt = 1
 
     def get_ping(self):
         '''
@@ -115,7 +116,6 @@ class LogiConnect:
         '''
         Function: Turns off and destroys all PPP sessions to the cellular network
         '''
-
         logging.info('Disconnecting All Sessions...')
 
         for proc in psutil.process_iter():
@@ -129,10 +129,10 @@ class LogiConnect:
                     psutil.Process(pinfo['pid']).kill()
                     self.kill_proc_tree(pinfo['pid'])
 
-            except:
+            except Exception as e:
                 logging.error('ERR133: Failed to kill pid processes')
-                self.err = self.err + 'E133; '
-                raise
+                errx = 'E133; ' + str(e.args)
+                raise Exception(errx)  
             
     def kill_proc_tree(self, pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
         '''
@@ -142,16 +142,22 @@ class LogiConnect:
 
         assert pid != os.getpid(), 'wont kill myself'
         
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
+        try:
+            parent = psutil.Process(pid)
+            children = parent.children(recursive=True)
+            
+            if include_parent:
+                children.append(parent)
+            
+            for p in children:
+                p.send_signal(sig)
+            
+            gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
         
-        if include_parent:
-            children.append(parent)
-        
-        for p in children:
-            p.send_signal(sig)
-        
-        gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+        except: 
+            logging.error('ERR137: Process kill failure; no such process')
+            errx = 'E137; '
+            raise Exception(errx)
         
         return (gone, alive)
 
@@ -167,15 +173,16 @@ class LogiConnect:
 
         time.sleep(15)
 
-    def antenna_cycle(self):
+    def antenna_cycle(self, cloud):
         '''
         Function: cycles the antenna on/off and increases connection reliability
         '''        
         logging.info('Cycling the radio antenna...')
-        self.cloud.network.modem.radio_power(False)
-        time.sleep(5)
-        self.cloud.network.modem.radio_power(True)
-        time.sleep(5)
+        cloud.network.modem.radio_power(False)
+        time.sleep(10)
+
+        cloud.network.modem.radio_power(True)
+        time.sleep(10)
     
     def get_ntp(self, server):
         '''
@@ -296,104 +303,93 @@ class LogiConnect:
         '''
         Function: initializes cloud object
         '''
-
         logging.info('Connecting to on-board modem and building new cloud object...')
-        while True:
-            try:
-                cloud = CustomCloud(None, network='cellular')
+        try:
+            cloud = CustomCloud(None, network='cellular')
 
-            except NetworkError:
-                logging.error('ERR101: Could not find modem')
-                self.err = self.err + 'E101; '
-                self.rtc_wake('15', 'mem')
-                continue
+        except NetworkError:
+            logging.error('ERR101: Could not find modem')
+            errx = 'E101; '
+            raise Exception(errx)
 
-            except SerialError:
-                logging.error('ERR103: Could not find usable serial port')
-                self.err = self.err + 'E103; '
-                self.rtc_wake('15', 'mem')
-                continue
-            
-            except:
-                logging.error('ERR129: Cloud object error')
-                self.err = self.err + 'E129; '
-                self.rtc_wake('15', 'mem')
-                continue
-            
-            else: 
-                logging.info('--> Successfully found USB Modem & created cloud object') 
-                break
+        except SerialError:
+            logging.error('ERR103: Could not find usable serial port')
+            errx = 'E103; '
+            raise Exception(errx)
         
-        return cloud
-       
-    def cell_connect(self):
+        except:
+            logging.error('ERR129: Cloud object error')
+            errx = 'E129; '
+            raise Exception(errx)
+        
+        else: 
+            logging.info('--> Successfully found USB Modem & created cloud object') 
+            return cloud
+             
+    def cell_connect(self, cloud):
         '''
         Function: connects device to cell tower and starts ppp session
         '''
-
         logging.info('Connecting to Cellular Network...')
         try:
-            connect_result = self.cloud.network.connect()
+            connect_result = cloud.network.connect()
 
         except PPPError:
             logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
-            self.err = self.err + 'E105; '
-            return False
+            errx = 'E105; '
+            raise Exception(errx)
   
         except SerialException:
             logging.error('ERR123: Modem reports readiness but returns no data')
-            self.err = self.err + 'E123; '
-            return False
+            errx = 'E123; '
+            raise Exception(errx)
 
         except:
             logging.error('ERR131: Cellular connection error')
-            self.err = self.err + 'E131; '
-            return False
+            errx = 'E131; '
+            raise Exception(errx)
 
         else:
             if connect_result == False:
                 logging.error('ERR107: Could not connect to cellular network - modem hangup')
-                self.err = self.err + 'E107; '
-                return False
-            
+                errx = 'E107; '
+                raise Exception(errx)
             else:
                 logging.info('--> Successfully Connected to Cell Network')
                 time.sleep(5)
-                return True
 
-    def mqtt_connect(self):
+    def mqtt_connect(self, myAWSIoTMQTTClient):
         '''
         Function: connect to MQTT broker
         '''
-
         logging.info('Connecting to MQTT...')
         try:
-            mqtt_result = self.myAWSIoTMQTTClient.connect()
+            mqtt_result = myAWSIoTMQTTClient.connect()
 
         except gaierror:
             logging.error('ERR109: Temporary failure in DNS server name resolution')
-            self.err = self.err + 'E109; '
-            return False
-        
+            errx = 'E109; '
+            raise Exception(errx)
+
         except connectTimeoutException:
             logging.error('ERR121: MQTT client connection timeout')
-            self.err = self.err + 'E121; '
-            return False
+            errx = 'E121; '
+            raise Exception(errx)
 
         except SSLCertVerificationError:
             logging.error('ERR125: SSL Cerficate Verification Error, certificate not yet valid')
-            self.err = self.err + 'E125; '
-            return False
+            errx = 'E125; '
+            raise Exception(errx)
 
         else:
             if mqtt_result == False: 
                 logging.error('ERR111: Could not Connect to MQTT Client')
-                self.err = self.err + 'E111; '
-                return False
+                errx = 'E111; '
+                raise Exception(errx)
+
             else: 
                 logging.info('--> Successfully Connected to MQTT Client')
                 time.sleep(5)
-                return True
         
     def skip_cycle(self):
         '''
@@ -408,6 +404,15 @@ class LogiConnect:
         logging.info('Wake up time: %s', self.wake_time)
         self.rtc_wake(str(sleep_time), 'mem')
     
+    def time_fetch(self):
+        '''
+        Function: fetches time from NTP servers
+        '''
+        logging.info('Calibrating system clock...')
+        rolex = self.get_ntp('1.debian.pool.ntp.org')
+        logging.info('UTC Time: %s', rolex)
+        return rolex
+        
     def main(self):
 
         ### Set up the logger
@@ -421,23 +426,35 @@ class LogiConnect:
         ### Start the program
         logging.info('###---------- Logi Cellular Program Start ----------###')
         
-        self.myAWSIoTMQTTClient, self.callBackContainer = self.init_mqtt(self.mqtt)
+        myAWSIoTMQTTClient, callBackContainer = self.init_mqtt(self.mqtt)
 
         ### Schema Version
         logging.info('MQTT Schema: %s', self.schema) 
 
-        self.cycle_cnt = 1
-        self.err = ''
-
         logging.info('Initial connect check...')
         
-        self.antenna_cycle()
-        self.cell_connect()
-        
+        while True:
+            try:
+                cloud = self.create_cloud()
+                self.antenna_cycle(cloud)
+                self.cell_connect(cloud)
+                break
+
+            except Exception as e:
+                self.err = self.err + str(e.args)
+                self.rtc_wake('10', 'mem')
+                
+                try:
+                    self.clean_kill()
+                except Exception as e:
+                    self.err = self.err + str(e.args)
+                    pass
+                
+                continue
+
+            
         ### Calibrate system clock
-        logging.info('Calibrating system clock...')
-        rolex = self.get_ntp('1.debian.pool.ntp.org')
-        logging.info('UTC Time: %s', rolex)
+        rolex = self.time_fetch()
         self.set_time(rolex)
 
         ### Set sleep schedule
@@ -476,27 +493,31 @@ class LogiConnect:
                     att = 1
                     continue
 
-                self.clean_kill()
+                try:
 
-                if self.create_cloud() is False:
+                    try:
+                        self.clean_kill()
+                    except Exception as e:
+                        self.err = self.err + str(e.args)
+                        pass
+
+                    cloud = self.create_cloud()
+                    self.antenna_cycle(cloud)
+                    self.cell_connect(cloud)
+                    self.mqtt_connect(myAWSIoTMQTTClient)
+                    break
+
+                except Exception as e:
+                    self.err = self.err + str(e.args)
+                    logging.info('Connection Cycle unsuccessful, rebooting...')
+                    self.rtc_wake('10', 'mem')
                     att += 1
                     continue
 
-                self.antenna_cycle()
-
-                if self.cell_connect() is False:
-                    att += 1
-                    continue    
-                    
-                if self.mqtt_connect() is False:
-                    att += 1
-                    continue
-
-                break                
-
+                
             ### Record the RSSI
             try: 
-                rssi = self.cloud.network.signal_strength
+                rssi = cloud.network.signal_strength
             except:
                 logging.error('ERR117: Error getting RSSI values')
                 rssi = 'err'

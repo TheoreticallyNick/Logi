@@ -50,3 +50,4 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR131 - 
     ERR133 - Failed to kill pid processes
     ERR135 - NTP server error
+    ERR137 - Process kill failure; no such process
