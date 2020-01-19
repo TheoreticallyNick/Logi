@@ -45,10 +45,10 @@ class LogiConnect:
         '''
         LogiConnect Constructor
         '''
-
         self.mqtt = ConnectMQTTParams()
         self.schema = 'schema_1_2'
-  
+        self.cloud = self.create_cloud()
+
     def get_ping(self):
         '''
         Function: pings the google server
@@ -170,8 +170,7 @@ class LogiConnect:
     def antenna_cycle(self):
         '''
         Function: cycles the antenna on/off and increases connection reliability
-        '''
-        
+        '''        
         logging.info('Cycling the radio antenna...')
         self.cloud.network.modem.radio_power(False)
         time.sleep(5)
@@ -292,36 +291,41 @@ class LogiConnect:
                 continue
                          
         return val, err
-    
+
     def create_cloud(self):
         '''
         Function: initializes cloud object
         '''
 
-        self.cloud = None
         logging.info('Connecting to on-board modem and building new cloud object...')
-        try:
-            self.cloud = CustomCloud(None, network='cellular')
+        while True:
+            try:
+                cloud = CustomCloud(None, network='cellular')
 
-        except NetworkError:
-            logging.error('ERR101: Could not find modem')
-            self.err = self.err + 'E101; '
-            return False
+            except NetworkError:
+                logging.error('ERR101: Could not find modem')
+                self.err = self.err + 'E101; '
+                self.rtc_wake('15', 'mem')
+                continue
 
-        except SerialError:
-            logging.error('ERR103: Could not find usable serial port')
-            self.err = self.err + 'E103; '
-            return False
+            except SerialError:
+                logging.error('ERR103: Could not find usable serial port')
+                self.err = self.err + 'E103; '
+                self.rtc_wake('15', 'mem')
+                continue
+            
+            except:
+                logging.error('ERR129: Cloud object error')
+                self.err = self.err + 'E129; '
+                self.rtc_wake('15', 'mem')
+                continue
+            
+            else: 
+                logging.info('--> Successfully found USB Modem & created cloud object') 
+                break
         
-        except:
-            logging.error('ERR129: Cloud object error')
-            self.err = self.err + 'E129; '
-            return False
-        
-        else: 
-            logging.info('--> Successfully found USB Modem & created cloud object') 
-            return True
-
+        return cloud
+       
     def cell_connect(self):
         '''
         Function: connects device to cell tower and starts ppp session
@@ -427,7 +431,6 @@ class LogiConnect:
 
         logging.info('Initial connect check...')
         
-        self.create_cloud()
         self.antenna_cycle()
         self.cell_connect()
         
@@ -541,7 +544,7 @@ class LogiConnect:
 
             ### Publish to MQTT Broker
             if self.publish_mqtt(JSONpayload):
-                err = ''
+                self.err = ''
 
             self.cycle_cnt = self.cycle_cnt + 1
             
