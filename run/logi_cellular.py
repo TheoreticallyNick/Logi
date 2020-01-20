@@ -565,8 +565,7 @@ class LogiConnect:
                 self.err = self.err + 'E119; '
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            ### Measure the battery level
-            try:
+            ### Measure the battery
                 bat = Battery('P8_10')
                 if bat.getStatus():
                     bat_lvl = 85

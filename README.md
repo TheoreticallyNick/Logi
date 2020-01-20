@@ -47,7 +47,7 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR125 - Battery status GPIO error
     ERR127 - Publish Timeout Exception
     ERR129 - Cloud object error
-    ERR131 - 
+    ERR131 - Cellular connection error
     ERR133 - Failed to kill pid processes
     ERR135 - NTP server error
     ERR137 - Process kill failure; no such process
