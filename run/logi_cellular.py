@@ -398,15 +398,52 @@ class LogiConnect:
         logging.info('UTC Time: %s', rolex)
         return rolex
         
-    def main(self):
-
-        ### Set up the logger
+    def set_logger(self):
+        '''
+        Function: sets up the logger
+        '''
         logi_log = self.mqtt.thingName + '_log.log'
         logging.basicConfig(filename=logi_log, filemode='w', format='%(asctime)s -- %(levelname)s: %(message)s', level=logging.INFO)
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
         logging.getLogger('').addHandler(console)
-        logging.info('--> Logger Successfully Initialized')  
+        logging.info('--> Logger Successfully Initialized')
+    
+    def set_schedule(self):
+        '''
+        Function: creates schedule array, indexed to the nearest scheduled time
+        '''
+        sched = [] 
+        f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
+        sched = f.read().split(',')
+        f.close()
+        sched = self.sched_index(sched)   
+        sched_cycle = cycle(sched)
+        wake_time = sched[0]
+
+        return sched_cycle, wake_time
+
+    def set_board_io(self):
+        '''
+        Function: initializes the I/O
+        '''
+        logging.info('Initialing Board I/O...')
+        try: 
+            ADC.setup()
+            lev     = FluidLevel('P9_39')
+            mpl     = MPL3115A2()
+            logging.info('--> Successfully Initialized I/O')
+        except:
+            logging.error('ERR115: Error initializing board I/O')
+            errx = 'E115; '
+            raise Exception(errx)
+
+        return lev, mpl
+
+    def main(self):
+
+        ### Set up the logger
+        self.set_logger()
 
         ### Start the program
         logging.info('###---------- Logi Cellular Program Start ----------###')
@@ -417,7 +454,7 @@ class LogiConnect:
         logging.info('MQTT Schema: %s', self.schema) 
 
         ### Connection Cycle
-        logging.info('Initial connection check...')
+        logging.info('Initial connection and calibration...')
         while True:
             try:
                 cloud = self.create_cloud()
@@ -436,32 +473,18 @@ class LogiConnect:
                     pass
 
                 continue
-
-            
+   
         ### Calibrate system clock
         rolex = self.time_fetch()
         self.set_time(rolex)
 
         ### Set sleep schedule
-        sched = [] 
-        f = open('/home/debian/Desktop/keys/schedule.txt', 'r')
-        sched = f.read().split(',')
-        f.close()
-        sched = self.sched_index(sched)   
-        self.sched_cycle = cycle(sched)
-        self.wake_time = sched[0]
-
+        sched_cycle, wake_time = self.set_schedule()
+        
         ### Init Board I/O
-        logging.info('Initialing Board I/O...')
-        try: 
-            ADC.setup()
-            lev     = FluidLevel('P9_39')
-            mpl     = MPL3115A2()
-            logging.info('--> Successfully Initialized I/O')
-        except:
-            logging.error('ERR115: Error initializing board I/O')
-            self.err = self.err + 'E115; '
+        lev, mpl = self.set_board_io()
                 
+        ### Publish Program Loop
         while True:
 
             ### Start cycle
@@ -556,12 +579,12 @@ class LogiConnect:
 
 
             ### Next Wake Up Time
-            self.wake_time = (next(self.sched_cycle))
+            wake_time = (next(sched_cycle))
 
             ### Set the MQTT Message Payload
             JSONpayload = json.dumps(
                 {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                'schem': self.schema, 'wake': self.wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
+                'schem': self.schema, 'wake': wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
                 'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
 
             ### Publish to MQTT Broker
@@ -583,8 +606,8 @@ class LogiConnect:
             GPIO.cleanup()
 
             ### Bash Command to Enter Sleep Cycle
-            logging.info('Wake up time: %s', self.wake_time)
-            sleep_time = self.sleep_calc(self.wake_time)
+            logging.info('Wake up time: %s', wake_time)
+            sleep_time = self.sleep_calc(wake_time)
             logging.info('Sleep time in sec: %s', str(sleep_time))
             self.rtc_wake(str(sleep_time), 'mem')
         
