@@ -571,8 +571,8 @@ class LogiConnect:
                 else:
                     bat_lvl = 15
             except: 
-                logging.error('ERR125: Battery status GPIO error')
-                self.err = self.err + 'ERR125; '
+                logging.error('ERR143: Battery status GPIO error')
+                self.err = self.err + 'E143; '
                 bat_lvl = 999
 
 

@@ -44,10 +44,13 @@ keys - contains device specific information for AWS MQTT broker connection
     ERR119 - I2C signal error. I2C input signals are either faulted or not detected.
     ERR121 - MQTT Connection Timeout
     ERR123 - Modem reports readiness but returns no data
-    ERR125 - Battery status GPIO error
+    ERR125 - SSL Cerficate Verification Error, certificate not yet valid
     ERR127 - Publish Timeout Exception
     ERR129 - Cloud object error
     ERR131 - Cellular connection error
     ERR133 - Failed to kill pid processes
     ERR135 - NTP server error
     ERR137 - Process kill failure; no such process
+    ERR139 - MQTT Publish Error
+    ERR141 - Unable to Publish to MQTT, publish cycle skipped
+    ERR143 - Battery status GPIO error
