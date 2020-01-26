@@ -1,25 +1,38 @@
-import Adafruit_BBIO.GPIO as GPIO
+import Adafruit_BBIO.ADC as ADC
 import time
 
-class Battery:
-    def __init__(self, GPIOpin):
-        self.GPIOpin = GPIOpin
-        GPIO.setup(self.GPIOpin, GPIO.IN)
+'''
+Pinout Reference Table:
+    "AIN4", "P9_33"
+    "AIN6", "P9_35"
+    "AIN5", "P9_36"
+    "AIN2", "P9_37"
+    "AIN3", "P9_38"
+    "AIN0", "P9_39"
+    "AIN1", "P9_40"
+'''
 
-    def getStatus(self):
-        if GPIO.input(self.GPIOpin):
-            return True
-        else:
-            return False
+class Battery:
+    def __init__(self, ADCpin):
+        self.ADCpin = ADCpin
+
+    def getRaw(self):
+        raw = ADC.read_raw(self.ADCpin)
+        
+        return raw
+
+    def getVoltage(self):
+        volts = ADC.read(self.ADCpin)
+
+        return volts
 
 def main():
-    bat = Battery("P8_10")
+    bat = Battery('P9_37')
 
-    if bat.getStatus():
-        print("Battery Okay")
-    else:
-        print("Battery Low")
-    
+    ADC.setup()
+
+    print("Raw Bits: %.2f"%(bat.getRaw()))
+    print("Analog Voltage: %.2f"%(bat.getVoltage()))    
     
             
 if __name__=="__main__":

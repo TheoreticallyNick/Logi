@@ -433,13 +433,14 @@ class LogiConnect:
             ADC.setup()
             lev     = FluidLevel('P9_39')
             mpl     = MPL3115A2()
+            bat     = Battery('P9_37')
             logging.info('--> Successfully Initialized I/O')
         except:
             logging.error('ERR115: Error initializing board I/O')
             self.err = self.err + 'E115; '
             raise
 
-        return lev, mpl
+        return lev, mpl, bat
 
     def custom_callback(self, client, userdata, message):
         logging.info("Received a new message: " + message.payload)
@@ -467,8 +468,7 @@ class LogiConnect:
                 self.cell_connect(cloud)
                 break
 
-            except Exception as e:
-                self.err = self.err + str(e)
+            except:
                 self.rtc_wake('10', 'mem')
                 
                 try:
@@ -486,7 +486,7 @@ class LogiConnect:
         sched_cycle, wake_time = self.set_schedule()
         
         ### Init Board I/O
-        lev, mpl = self.set_board_io()
+        lev, mpl, bat = self.set_board_io()
                 
         ### Publish Program Loop
         while True:
@@ -563,19 +563,6 @@ class LogiConnect:
                 self.err = self.err + 'E119; '
                 mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
 
-            ### Measure the battery
-            try:
-                bat = Battery('P8_10')
-                if bat.getStatus():
-                    bat_lvl = 85
-                else:
-                    bat_lvl = 15
-            except: 
-                logging.error('ERR143: Battery status GPIO error')
-                self.err = self.err + 'E143; '
-                bat_lvl = 999
-
-
             ### Next Wake Up Time
             wake_time = (next(sched_cycle))
 
@@ -583,7 +570,7 @@ class LogiConnect:
             JSONpayload = json.dumps(
                 {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
                 'schem': self.schema, 'wake': wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
-                'rssi': rssi, 'bat': bat_lvl, 'fuel': lev.getLev(), 'temp': mplTemp['c']})
+                'rssi': rssi, 'bat': bat.getVoltage(), 'fuel': lev.getLev(), 'temp': mplTemp['c']})
 
             ### Publish to MQTT Broker
             att = 1
