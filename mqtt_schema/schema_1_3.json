@@ -1,0 +1,14 @@
+{
+    "id": "bone id",
+    "ts": "unix timestamp", 
+    "ts_l": "local timestamp", 
+    "schem": "mqtt schema version",
+    "ver": "software version",
+    "wake": "next wake up time in seconds", 
+    "cyc": "mqtt cycles completed", 
+    "err": "errors", 
+    "rssi": "rssi value",
+    "bat": "battery level", 
+    "lvl": "propane lvl", 
+    "temp": "temperature in C" 
+}

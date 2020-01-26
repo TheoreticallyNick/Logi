@@ -197,6 +197,8 @@ class LogiConnect:
             ntpDate = ctime(response.tx_time)
             logging.info('UTC Server Time is: %s', ntpDate)
         
+        except NTPException:
+        
         except:
             logging.error('ERR135: NTP server error')
             self.err = self.err + 'E135; '
