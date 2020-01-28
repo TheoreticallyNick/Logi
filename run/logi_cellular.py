@@ -197,8 +197,6 @@ class LogiConnect:
             ntpDate = ctime(response.tx_time)
             logging.info('UTC Server Time is: %s', ntpDate)
         
-        except NTPException:
-        
         except:
             logging.error('ERR135: NTP server error')
             self.err = self.err + 'E135; '
@@ -454,7 +452,7 @@ class LogiConnect:
         self.set_logger()
 
         ### Start the program
-        logging.info('###---------- Logi Cellular v1.1.4 Program Start ----------###')
+        logging.info('###---------- Logi Cellular v1.1.5 Program Start ----------###')
         
         myAWSIoTMQTTClient, callBackContainer = self.init_mqtt(self.mqtt)
 
