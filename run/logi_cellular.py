@@ -169,9 +169,10 @@ class LogiConnect:
         logging.warning('Soft Rebooting...')
         bashCommand = 'sudo rtcwake -u -s %s -m %s'%(rolex, mode)
         logging.info('@bash: %s', bashCommand)
-        subprocess.call(bashCommand, shell=True)
-
-        time.sleep(15)
+        proc = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        proc.communicate()
+        proc.stdout.close()
+        time.sleep(10)
 
     def antenna_cycle(self, cloud):
         '''

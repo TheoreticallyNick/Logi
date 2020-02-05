@@ -25,6 +25,7 @@ git clone https://github.com/hologram-io/hologram-tools.git
 cd hologram-tools/novaupdate/
 sudo nano nova410update.py
 > change 'raw_input' to 'input'
+sudo python3 nova410update.py
 
 ### Stop NTP 
 sudo service ntp stop
