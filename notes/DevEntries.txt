@@ -231,3 +231,9 @@ Date: 1/12/20
 Task: Connect all components and test the board with a 20Ah battery
 Notes:
     - Must find a compact and robust way to connect all junctions in Logi
+
+
+Date: 2/4/20
+Task: Resolve the OSError 24 bug
+Notes:
+    - Used a different subprocess.Popen, with an ending closing statement
