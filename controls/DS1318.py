@@ -28,7 +28,7 @@ class FluidLevel:
 
     def getLev(self):
         volts = ADC.read(self.ADCpin)
-        lev = (volts * 142.857) - 27.143
+        lev = (volts * 92.105) + 3.422
 
         return lev
 
