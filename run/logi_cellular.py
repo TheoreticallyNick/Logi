@@ -272,7 +272,7 @@ class LogiConnect:
             topic = 'logi/devices/%s'%(self.mqtt.thingName)
             logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
-            myAWSIoTMQTTClient.publishAsync(topic, JSONpayload, 1)    
+            myAWSIoTMQTTClient.publish(topic, JSONpayload)    
 
         except publishTimeoutException:
             logging.error('ERR127: Publish Timeout Exception')
@@ -374,7 +374,7 @@ class LogiConnect:
 
             else: 
                 logging.info('--> Successfully Connected to MQTT Client')
-                time.sleep(5)
+                time.sleep(10)
         
     def skip_cycle(self, sched):
         '''
@@ -453,7 +453,7 @@ class LogiConnect:
         self.set_logger()
 
         ### Start the program
-        logging.info('###---------- Logi Cellular v1.1.5 Program Start ----------###')
+        logging.info('###---------- Logi Cellular v1.1.6 Program Start ----------###')
         
         myAWSIoTMQTTClient, callBackContainer = self.init_mqtt(self.mqtt)
 

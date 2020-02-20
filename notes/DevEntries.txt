@@ -234,6 +234,13 @@ Notes:
 
 
 Date: 2/4/20
-Task: Resolve the OSError 24 bug
+Task: Resolve OSError 24
 Notes:
     - Used a different subprocess.Popen, with an ending closing statement
+
+Date: 2/16/20
+Task: Resolve OSError 24
+Notes:
+    - The previous fix didn't work. At this point, I do not believe that it is a problem related with the code
+    - Strong belief that it is due to too many devices accessing the same Policy statemtn at the same time.
+    - Each device now has its own policy statement -- observing for changes.
