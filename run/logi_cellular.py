@@ -104,6 +104,7 @@ class LogiConnect:
             self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
             self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
             self.myCallbackContainer = CallbackContainer(self.myAWSIoTMQTTClient)
+            self.myAWSIoTMQTTClient.configureOfflinePublishQueueing(2, dropBehavior=DROP_OLDEST)
             logging.info('--> Successfully Initialized!')
 
         except:
@@ -547,8 +548,8 @@ class LogiConnect:
                 self.err = self.err + 'E117; '
         
             ### Subscribe to MQTT Topics
-            mstr_topic = 'logi/master/%s'%(self.mqtt.thingName)
-            self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, self.custom_callback)
+            #mstr_topic = 'logi/master/%s'%(self.mqtt.thingName)
+            #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, self.custom_callback)
             
             ### Timestamp 
             timestamp = time.time()
@@ -593,7 +594,7 @@ class LogiConnect:
             self.cycle_cnt = self.cycle_cnt + 1
             
             ### Subscribed time window
-            time.sleep(10)
+            #time.sleep(10)
             
             
             ### Kill all open PPP connections and processes
