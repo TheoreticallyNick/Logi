@@ -19,6 +19,7 @@ from Hologram.CustomCloud import CustomCloud
 from Exceptions.HologramError import NetworkError, PPPError, SerialError, HologramError
 from MQTTconnect import ConnectMQTTParams
 from MQTTconnect import CallbackContainer
+import AWSIoTPythonSDK.MQTTLib
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 from AWSIoTPythonSDK.exception.AWSIoTExceptions import *
 from LED import CommandLED
@@ -104,7 +105,7 @@ class LogiConnect:
             self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
             self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
             self.myCallbackContainer = CallbackContainer(self.myAWSIoTMQTTClient)
-            self.myAWSIoTMQTTClient.configureOfflinePublishQueueing(2, dropBehavior=DROP_OLDEST)
+            self.myAWSIoTMQTTClient.configureOfflinePublishQueueing(3, AWSIoTPythonSDK.MQTTLib.DROP_OLDEST)
             logging.info('--> Successfully Initialized!')
 
         except:
@@ -273,7 +274,7 @@ class LogiConnect:
             topic = 'logi/devices/%s'%(self.mqtt.thingName)
             logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
-            myAWSIoTMQTTClient.publish(topic, JSONpayload)    
+            myAWSIoTMQTTClient.publishAsync(topic, JSONpayload, 1)    
 
         except publishTimeoutException:
             logging.error('ERR127: Publish Timeout Exception')
