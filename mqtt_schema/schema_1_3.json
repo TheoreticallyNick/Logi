@@ -2,7 +2,7 @@
 {
     "id": "bone id",
     "ts": "unix timestamp", 
-    "ts_l": "local timestamp", 
+    "ts_l": "local timestamp yyyy-MM-dd HH:mm:ss", 
     "schem": "mqtt schema version",
     "ver": "software version",
     "wake": "next wake up time in seconds", 
