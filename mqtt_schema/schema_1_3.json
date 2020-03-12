@@ -1,6 +1,6 @@
 //Not Deployed//
 {
-    "id": "bone id",
+    "id": "device id - logi15",
     "ts": "unix timestamp", 
     "ts_l": "local timestamp yyyy-MM-dd HH:mm:ss", 
     "schem": "mqtt schema version",
@@ -10,6 +10,6 @@
     "err": "errors", 
     "rssi": "rssi value",
     "bat": "battery level", 
-    "lvl": "propane lvl", 
+    "lvl": "lvl", 
     "temp": "temperature in C" 
 }

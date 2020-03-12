@@ -274,7 +274,7 @@ class LogiConnect:
             topic = 'logi/devices/%s'%(self.mqtt.thingName)
             logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
-            myAWSIoTMQTTClient.publishAsync(topic, JSONpayload, 1)    
+            myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)    
 
         except publishTimeoutException:
             logging.error('ERR127: Publish Timeout Exception')
@@ -455,7 +455,7 @@ class LogiConnect:
         self.set_logger()
 
         ### Start the program
-        logging.info('###---------- Logi Cellular v1.1.6 Program Start ----------###')
+        logging.info('###---------- Logi Cellular v1.1.7 Program Start ----------###')
         
         myAWSIoTMQTTClient, callBackContainer = self.init_mqtt(self.mqtt)
 
