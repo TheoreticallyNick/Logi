@@ -36,9 +36,8 @@ import ntplib
 from PWR import Battery
 
 ### TODO:
-#       - Put together an array of the connection function
-#       - Look into using Docker to create the right virtual machine to run this on 
-#       - Determine appropriate tunnel time window
+# - Fix RSSI command and value 
+# - Ensure scheduling is in the appropriate method
 
 class LogiConnect:
 
@@ -47,9 +46,10 @@ class LogiConnect:
         LogiConnect Constructor
         '''
         self.mqtt = ConnectMQTTParams()
-        self.schema = 'schema_1_2'
+        self.schema = 'schema_1_3'
         self.err = ''
         self.cycle_cnt = 1
+        self.version = '1.7'
 
     def get_ping(self):
         '''
@@ -455,7 +455,7 @@ class LogiConnect:
         self.set_logger()
 
         ### Start the program
-        logging.info('###---------- Logi Cellular v1.1.7 Program Start ----------###')
+        logging.info('###---------- Logi Cellular v1.7 Program Start ----------###')
         
         myAWSIoTMQTTClient, callBackContainer = self.init_mqtt(self.mqtt)
 
@@ -542,7 +542,7 @@ class LogiConnect:
 
             ### Record the RSSI
             try: 
-                rssi = cloud.network.signal_strength
+                rssi = str(cloud.network.modem.signal_strength)
             except:
                 logging.error('ERR117: Error getting RSSI values')
                 rssi = 'err'
@@ -554,7 +554,7 @@ class LogiConnect:
             
             ### Timestamp 
             timestamp = time.time()
-            timelocal = time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime())
+            timelocal = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
             
             ### Get Temperature Data from MPL
             try:
@@ -572,8 +572,8 @@ class LogiConnect:
             ### Set the MQTT Message Payload
             JSONpayload = json.dumps(
                 {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                'schem': self.schema, 'wake': wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
-                'rssi': rssi, 'bat': bat.getVoltage(), 'fuel': lev.getLev(), 'temp': mplTemp['c']})
+                'schem': self.schema, 'ver': self.version, 'wake': wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
+                'rssi': rssi, 'bat': bat.getVoltage(), 'lvl': lev.getLev(), 'temp': mplTemp['c']})
 
             ### Publish to MQTT Broker
             att = 1
