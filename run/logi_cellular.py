@@ -49,7 +49,7 @@ class LogiConnect:
         self.schema = 'schema_1_3'
         self.err = ''
         self.cycle_cnt = 1
-        self.version = '1.7'
+        self.version = '1.3'
 
     def get_ping(self):
         '''
@@ -271,7 +271,7 @@ class LogiConnect:
         Function: handles publishing message to MQTT broker
         '''
         try:
-            topic = 'logi/devices/%s'%(self.mqtt.thingName)
+            topic = 'logi_1_3/devices/%s'%(self.mqtt.thingName)
             logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
             myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)    
@@ -455,7 +455,7 @@ class LogiConnect:
         self.set_logger()
 
         ### Start the program
-        logging.info('###---------- Logi Cellular v1.7 Program Start ----------###')
+        logging.info('###---------- Logi Cellular v1.3 Program Start ----------###')
         
         myAWSIoTMQTTClient, callBackContainer = self.init_mqtt(self.mqtt)
 
