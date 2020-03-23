@@ -39,7 +39,7 @@ from PWR import Battery
 # - Fix RSSI command and value 
 # - Ensure scheduling is in the appropriate method
 
-class LogiConnect:
+class LogiMQTTDebug:
 
     def __init__(self):
         '''
@@ -490,131 +490,58 @@ class LogiConnect:
         
         ### Init Board I/O
         lev, mpl, bat = self.set_board_io()
-                
-        ### Publish Program Loop
+
+        ### Start cycle
+        logging.info('###---------- Starting MQTT Debug Cycle ----------###')
+        led_red = CommandLED('P8_7')
+        led_red.lightOn()
+            
+        ### Connect to MQTT
+        self.mqtt_connect(myAWSIoTMQTTClient)
+
+
+        ### Record the RSSI
+        try: 
+            rssi = str(cloud.network.modem.signal_strength)
+        except:
+            logging.error('ERR117: Error getting RSSI values')
+            rssi = 'err'
+            self.err = self.err + 'E117; '
+    
+        ### Subscribe to MQTT Topics
+        #mstr_topic = 'logi/master/%s'%(self.mqtt.thingName)
+        #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, self.custom_callback)
+        
+        ### Timestamp 
+        timestamp = time.time()
+        timelocal = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        
+        ### Get Temperature Data from MPL
+        try:
+            mpl.control_alt_config()
+            mpl.data_config()
+            mplTemp = mpl.read_alt_temp()
+        except:
+            logging.error('ERR119: I2C bus error')
+            self.err = self.err + 'E119; '
+            mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
+
+        ### Next Wake Up Time
+        wake_time = (next(sched_cycle))
+
+        ### Set the MQTT Message Payload
+        JSONpayload = json.dumps(
+            {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
+            'schem': self.schema, 'ver': self.version, 'wake': wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
+            'rssi': rssi, 'bat': bat.getVoltage(), 'lvl': lev.getLev(), 'temp': mplTemp['c']})
+
+        ### Publish to MQTT Broker
         while True:
+            input("Press enter to publish")
+            self.publish_mqtt(JSONpayload, myAWSIoTMQTTClient)
+            logging.info("Wait 15 seconds...")
+            time.sleep(15)
 
-            ### Start cycle
-            logging.info('###---------- Starting Cycle Number: %i ----------###', self.cycle_cnt)
-            led_red = CommandLED('P8_7')
-            led_red.lightOn()
-            
-            ### Start Connection Process
-            att = 1
-            while True:
-
-                if att == 4:
-                    sched_cycle = self.skip_cycle(sched_cycle)
-                    att = 1
-                    continue
-                
-                if self.cycle_cnt != 1: 
-                    try:
-                        cloud = self.create_cloud()
-                        self.antenna_cycle(cloud)
-                        self.cell_connect(cloud)
-                        self.mqtt_connect(myAWSIoTMQTTClient)
-                        break
-                    except:
-                        logging.info('Connection Cycle unsuccessful, rebooting...')
-                        try:
-                            self.clean_kill()
-                        except:
-                            pass
-                        att += 1
-                        self.rtc_wake('10', 'mem')
-                        continue
-                
-                else:
-                    try:
-                        self.mqtt_connect(myAWSIoTMQTTClient)
-                        break
-                    except:
-                        logging.info('Connection Cycle unsuccessful, rebooting...')
-                        try:
-                            self.clean_kill()
-                        except:
-                            pass
-                        att += 1
-                        self.rtc_wake('10', 'mem')
-                        continue
-
-
-            ### Record the RSSI
-            try: 
-                rssi = str(cloud.network.modem.signal_strength)
-            except:
-                logging.error('ERR117: Error getting RSSI values')
-                rssi = 'err'
-                self.err = self.err + 'E117; '
-        
-            ### Subscribe to MQTT Topics
-            #mstr_topic = 'logi/master/%s'%(self.mqtt.thingName)
-            #self.myAWSIoTMQTTClient.subscribe(mstr_topic, 0, self.custom_callback)
-            
-            ### Timestamp 
-            timestamp = time.time()
-            timelocal = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-            
-            ### Get Temperature Data from MPL
-            try:
-                mpl.control_alt_config()
-                mpl.data_config()
-                mplTemp = mpl.read_alt_temp()
-            except:
-                logging.error('ERR119: I2C bus error')
-                self.err = self.err + 'E119; '
-                mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
-
-            ### Next Wake Up Time
-            wake_time = (next(sched_cycle))
-
-            ### Set the MQTT Message Payload
-            JSONpayload = json.dumps(
-                {'id': self.mqtt.thingName, 'ts': timestamp, 'ts_l': timelocal, 
-                'schem': self.schema, 'ver': self.version, 'wake': wake_time, 'cyc': str(self.cycle_cnt), 'err': self.err, 
-                'rssi': rssi, 'bat': bat.getVoltage(), 'lvl': lev.getLev(), 'temp': mplTemp['c']})
-
-            ### Publish to MQTT Broker
-            att = 1
-            while True:
-                if att == 4:
-                    logging.error('Three MQTT publish attempts failed, publish cycle skipped')
-                    break
-                try:
-                    self.publish_mqtt(JSONpayload, myAWSIoTMQTTClient)
-                except:
-                    logging.error('ERR141: Unable to Publish to MQTT, publish cycle skipped')
-                    self.err = self.err + 'ERR141; '
-                    att += 1
-                    continue
-                finally:
-                    self.err = ''
-                    break
-
-            self.cycle_cnt = self.cycle_cnt + 1
-            
-            ### Subscribed time window
-            #time.sleep(10)
-            
-            
-            ### Kill all open PPP connections and processes
-            logging.info('Killing all PPP connections...')
-            try:
-                self.clean_kill()
-            except:
-                pass
-            
-            ### Cycle LED's to OFF
-            led_red.lightOff()
-            GPIO.cleanup()
-
-            ### Bash Command to Enter Sleep Cycle
-            logging.info('Wake up time: %s', wake_time)
-            sleep_time = self.sleep_calc(wake_time)
-            logging.info('Sleep time in sec: %s', str(sleep_time))
-            self.rtc_wake(str(sleep_time), 'mem')
-        
 if __name__=='__main__':
-    logi = LogiConnect()
+    logi = LogiMQTTDebug()
     logi.main()
