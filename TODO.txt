@@ -1,0 +1,9 @@
+Date: 3/24/2020
+Tasks:
+    - Need the answers to the following questions from Tom:
+        - What connection infrastructure is necessary? BLE, Wifi, Cellular:
+            -> Milestone #1 all, Milestone #2 we will review how necessary these answers
+        - Solar: does a solar cell + smaller battery vs replacable battery
+        - Product Cost Target: Milestone #1 = $250, Milestone #2 = $80, target = $40 -- dowwnward sloping product cost improvement over time.
+        - Identify hardware related requirements as soon as possible
+        - Layout business plan/business model with associated cash flows
