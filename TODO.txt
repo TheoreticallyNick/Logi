@@ -7,3 +7,24 @@ Tasks:
         - Product Cost Target: Milestone #1 = $250, Milestone #2 = $80, target = $40 -- dowwnward sloping product cost improvement over time.
         - Identify hardware related requirements as soon as possible
         - Layout business plan/business model with associated cash flows
+
+Date: 3/27/2020
+Meeting Notes:
+    - Tom has the high level requirement and willl now distill these into 2nd and 3rd level requirements    
+    - Adding to the Theme: Designing for Software Flexibility, Rapid Deployment, Taking steps to Product Design for Commercial Product
+    - Aesthetics: OTS Enclosure, Magnets on the Bottom -- for Logi-3, looking at overmolding the battery as part of the device package
+    - Physical Requirements: Logi-1 easy BLE ON/OFF instead of a button, no programming/recharging ports
+    - Tom is going to explore the solar cell + rechargeable battery model
+    - Nick is going to write down the "optimized publishing cycle scheduling per the battery and solar cell" idea.
+    - Plan A is to use the Nordic NRF9160 chip -- Plan B is to resort to the Quectel chip
+    - Current supply chain target is a 4 to 6 week lead time
+    - All software updates will be done over the air
+
+Concerns: 
+    - Nordic NRF 9160 chip is new and we're concerned about supply chain bottlenecks
+
+Action Items:
+    - Nick is going to send Tom a gauge and sensor pair to test with
+    - Tom is going to put together a hardware design plan over the couple of days for Jay and I to review 4/1 target date
+    - 2x additional Logi-1's assembled with a target deployment next week (2x Logi-1's deployed thus far)
+
