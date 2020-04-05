@@ -1,5 +1,6 @@
 import smbus
 import time
+import logging
  
 # Get I2C bus
 bus = smbus.SMBus(2)
@@ -102,6 +103,27 @@ class MPL3115A2():
 
 		return {'p' : pressure}
 
+	def get_tempf(self):
+		try:
+			self.control_alt_config()
+			self.data_config()
+			mplTemp = self.read_alt_temp()
+		except:
+			logging.error('ERR119: I2C bus error')
+			mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
+
+		return mplTemp['f']
+
+	def get_tempc(self):
+		try:
+			self.control_alt_config()
+			self.data_config()
+			mplTemp = self.read_alt_temp()
+		except:
+			logging.error('ERR119: I2C bus error')
+			mplTemp = {'a' : 999, 'c' : 999, 'f' : 999}
+
+		return mplTemp['c']
 
 def main():
 	from MPL import MPL3115A2

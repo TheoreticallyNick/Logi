@@ -21,8 +21,10 @@ class Battery:
         
         return raw
 
-    def getVoltage(self):
+    def get_voltage(self):
         volts = ADC.read(self.ADCpin)
+
+        volts = round(volts, 2)
 
         return volts
 

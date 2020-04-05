@@ -16,19 +16,24 @@ class FluidLevel:
     def __init__(self, ADCpin):
         self.ADCpin = ADCpin
 
-    def getRaw(self):
+    def get_raw(self):
         raw = ADC.read_raw(self.ADCpin)
         
         return raw
 
-    def getVoltage(self):
+    def get_voltage(self):
         volts = ADC.read(self.ADCpin)
 
         return volts
 
-    def getLev(self):
-        volts = ADC.read(self.ADCpin)
-        lev = (volts * 92.105) + 3.422
+    def get_lvl(self):
+        try:
+            volts = ADC.read(self.ADCpin)
+            lev = (volts * 92.105) + 3.422
+            lev = round(lev, 2)
+        except:
+            lev = 999
+            pass
 
         return lev
 
