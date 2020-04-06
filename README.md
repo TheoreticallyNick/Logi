@@ -22,11 +22,13 @@ logi-1 - program folder
 ### MQTT Keys
 
 keys - contains device specific information for AWS MQTT broker connection
-    -> MQTTconnect.py   - device birth certificate
-    -> root-CA.crt      - AWS root-CA file
-    -> Bone#.cert.pem    - AWS device certificate
-    -> Bone#.private.key - AWS private key
-    -> Bone#.public.key  - AWS public key    
+    -> root-CA.crt          - AWS root-CA file
+    -> Logi#.cert.pem       - AWS device certificate
+    -> Logi#.private.key    - AWS private key
+    -> Logi#.public.key     - AWS public key   
+    -> schedule.txt         - device publishing scheduled time 
+    -> serial.txt           - device serial number
+    -> thingName.txt        - device name
 
 ### How To Run ###
 
