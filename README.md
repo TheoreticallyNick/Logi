@@ -4,7 +4,6 @@ Logi v1.0
 
 logi-1 - program folder
 
-    '
     -> controls - contains scripts for all input/output peripherals used by Logi
         -> AD8.py   - thermocouple class
         -> LED.py   - LED class
@@ -17,9 +16,8 @@ logi-1 - program folder
     -> run - Logi's main running scripts
         -> logi_cellular.py - cellular connection script
         -> logi_wifi.py     - wifi connection script
-    '
 
-### MQTT Keys
+### MQTT Keys ###
 
 keys - contains device specific information for AWS MQTT broker connection
     -> root-CA.crt          - AWS root-CA file
