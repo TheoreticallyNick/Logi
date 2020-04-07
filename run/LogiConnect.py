@@ -34,6 +34,8 @@ from psutil import NoSuchProcess
 import ntplib
 from PWR import Battery
 
+### LogiConnect v1.5 ###
+ 
 class LogiConnect:
 
     def __init__(self):
@@ -453,7 +455,7 @@ class LogiConnect:
         payload = json.dumps(
             {'id': self.mqtt.thingName, 'serial': self.mqtt.serial, 'ts': int(time.time()), 'ts_l': self.local_time(), 
             'schem': self.schema, 'ver': self.version, 'wake': self.wake_time, 'cyc': self.cycle_cnt, 'err': self.err, 
-            'rssi': self.get_rssi(), 'bat': self.bat.get_voltage(), 'lvl': self.lvl.get_lvl(), 'temp': self.mpl.get_tempf()})
+            'rssi': self.get_rssi(), 'bat': self.bat.get_voltage(), 'lvl': self.lvl.get_lvl(), 'temp': int(self.mpl.get_tempf())})
 
         return payload
     
