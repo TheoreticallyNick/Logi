@@ -1,0 +1,10 @@
+DEVICE DEPLOYEMENT NOTES
+
+Date: 4/7/20
+    Task: Retrieve and assess deployed devices from the field
+    Notes: 
+        - Logi15 was found to have a build up of water in the bottom of the enclosure, by the batteries
+        - It has been determined that it is best to start the device from home and deploy without
+            opening the enclosure
+        - Batteries last surprisingly long, over three weeks with the current setup, much longer than anticipated
+        - Logi31 did not have any water intrusion and was fully sealed when found

@@ -20,6 +20,7 @@ logi-1 - program folder
 ### MQTT Keys ###
 
 keys - contains device specific information for AWS MQTT broker connection
+
     -> root-CA.crt          - AWS root-CA file
     -> Logi#.cert.pem       - AWS device certificate
     -> Logi#.private.key    - AWS private key
