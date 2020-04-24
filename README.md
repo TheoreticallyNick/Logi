@@ -14,8 +14,10 @@ logi-1 - program folder
     -> tests - contains tests and experimentation based scripts
 
     -> run - Logi's main running scripts
-        -> logi_cellular.py - cellular connection script
-        -> logi_wifi.py     - wifi connection script
+        -> cell_connect.py  - cellular connection script
+        -> wifi_connect.py  - wifi connection script
+        -> LogiConnect.py   - LOGI Connection Class 
+        -> MQTTConnect.py   - MQTT Connection Class
 
 ### MQTT Keys ###
 
