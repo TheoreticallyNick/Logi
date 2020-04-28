@@ -29,7 +29,7 @@ class FluidLevel:
     def get_lvl(self):
         try:
             volts = ADC.read(self.ADCpin)
-            lev = (volts * 92.105) + 3.422
+            lev = (volts * 95.08) + 4.467
             lev = round(lev, 2)
         except:
             lev = 999
@@ -42,9 +42,9 @@ def main():
     ADC.setup()
     
     l = FluidLevel("P9_39")
-    print("Raw Bits: %.2f"%(l.getRaw()))
-    print("Analog Voltage: %.2f"%(l.getVoltage()))
-    print("Fluid Level: %.2f"%(l.getLev()))
+    print("Raw Bits: %.4f"%(l.get_raw()))
+    print("Analog Voltage: %.4f"%(l.get_voltage()))
+    print("Fluid Level: %.2f"%(l.get_lvl()))
             
 if __name__=="__main__":
     main()

@@ -47,7 +47,7 @@ class LogiConnect:
         self.schema = '1.4'
         self.err = ''
         self.cycle_cnt = 1
-        self.version = '1.4'
+        self.version = '1.5'
         self.schedule = self.get_schedule()
         self.wake_time = self.get_wake_time()
         self.set_board_io()

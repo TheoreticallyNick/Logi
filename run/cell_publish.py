@@ -5,7 +5,7 @@ import logging
 ### Create LogiConnect Object
 logi = LogiConnect()
 
-logging.info('###---------- Logi Cellular v1.4 Program Start ----------###')
+logging.info('###---------- Logi Cellular v1.5 Program Start ----------###')
 
 myAWSIoTMQTTClient, callBackContainer = logi.init_mqtt(logi.mqtt)
 
