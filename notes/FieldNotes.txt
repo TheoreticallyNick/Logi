@@ -8,3 +8,11 @@ Date: 4/7/20
             opening the enclosure
         - Batteries last surprisingly long, over three weeks with the current setup, much longer than anticipated
         - Logi31 did not have any water intrusion and was fully sealed when found
+
+Date: 4/30/20
+    Task: Logi29 Not Sending Messages for Over Three Days
+    Notes: 
+        - Internally, everything was intact
+        - Logi connected properly and did not show any signs of software problems or runtime issues
+        - The USB Nova dongle was turning on and off sporadically, indicating that it was somehow damaged -- will be investigating.
+        - The error mode can be found in the logs under Logi29 - 4.30.20
