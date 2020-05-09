@@ -1,11 +1,14 @@
 #!/bin/bash
-from logi_connect import LogiConnect
+import sys
+sys.path.append('../')
+from run.logi_connect import LogiConnect
 import logging
+import time
 
 ### Create LogiConnect Object
 logi = LogiConnect()
 
-logging.info('###---------- Logi Cellular v1.6 Program Start ----------###')
+logging.info('###---------- Logi Cellular v1.5 Program Start ----------###')
 
 myAWSIoTMQTTClient, callBackContainer = logi.init_mqtt(logi.mqtt)
 
@@ -97,7 +100,7 @@ while True:
             logging.error('Three MQTT publish attempts failed, publish cycle skipped')
             break
         try:
-            logi.publish_mqtt(JSONpayload, myAWSIoTMQTTClient)
+            logi.publish_mqtt_test(JSONpayload, myAWSIoTMQTTClient)
         except:
             logging.error('ERR141: Unable to Publish to MQTT, publish cycle skipped')
             logi.err = logi.err + 'ERR141; '
@@ -116,8 +119,7 @@ while True:
     except:
         pass
 
-    ### Bash Command to Enter Sleep Cycle
-    logging.info('Wake up time: %s', logi.wake_time)
-    sleep_time = logi.sleep_calc(logi.wake_time)
-    logging.info('Sleep time in sec: %s', str(sleep_time))
-    logi.rtc_wake(str(sleep_time), 'mem')
+    ### Publish the Message to MQTT
+    logging.info("Wait 30 seconds...")
+    time.sleep(30)
+    input("Press enter to publish")

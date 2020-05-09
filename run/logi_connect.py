@@ -16,8 +16,6 @@ from Hologram.Network import Network, Cellular
 from Hologram.HologramCloud import HologramCloud
 from Hologram.CustomCloud import CustomCloud
 from Exceptions.HologramError import NetworkError, PPPError, SerialError, HologramError
-from MQTTconnect import ConnectMQTTParams
-from MQTTconnect import CallbackContainer
 import AWSIoTPythonSDK.MQTTLib
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 from AWSIoTPythonSDK.exception.AWSIoTExceptions import *
@@ -54,6 +52,8 @@ class LogiConnect:
         self.mpl = MPL3115A2()
         self.lvl = FluidLevel('P9_39')
         self.bat = Battery('P9_37')
+        self.cloud = None
+        self.rssi = None
 
     def get_ping(self):
         '''
@@ -180,15 +180,15 @@ class LogiConnect:
         proc.stdout.close()
         time.sleep(10)
 
-    def antenna_cycle(self, cloud):
+    def antenna_cycle(self):
         '''
         Function: cycles the antenna on/off and increases connection reliability
         '''        
         logging.info('Cycling the radio antenna...')
-        cloud.network.modem.radio_power(False)
+        self.cloud.network.modem.radio_power(False)
         time.sleep(10)
 
-        cloud.network.modem.radio_power(True)
+        self.cloud.network.modem.radio_power(True)
         time.sleep(10)
     
     def get_ntp(self, server):
@@ -275,7 +275,7 @@ class LogiConnect:
         Function: handles publishing message to MQTT broker
         '''
         try:
-            topic = 'logi_1_4/devices/%s'%(self.mqtt.thingName)
+            topic = 'logi/devices/%s'%(self.mqtt.thingName)
             logging.info('Topic: %s', topic)
             logging.info('Published Message: %s', JSONpayload)
             myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)    
@@ -296,7 +296,7 @@ class LogiConnect:
         '''
         logging.info('Connecting to on-board modem and building new cloud object...')
         try:
-            cloud = CustomCloud(None, network='cellular')
+            self.cloud = CustomCloud(None, network='cellular')
 
         except NetworkError:
             logging.error('ERR101: Could not find modem')
@@ -315,15 +315,15 @@ class LogiConnect:
         
         else: 
             logging.info('--> Successfully found USB Modem & created cloud object') 
-            return cloud
              
-    def cell_connect(self, cloud):
+    def cell_connect(self):
         '''
         Function: connects device to cell tower and starts ppp session
         '''
         logging.info('Connecting to Cellular Network...')
         try:
-            connect_result = cloud.network.connect()
+            self.rssi = self.get_rssi()
+            connect_result = self.cloud.network.connect()
 
         except PPPError:
             logging.error('ERR105: Could not start a PPP Session -- Other Sessions still open')
@@ -455,7 +455,7 @@ class LogiConnect:
         payload = json.dumps(
             {'id': self.mqtt.thingName, 'serial': self.mqtt.serial, 'ts': int(time.time()), 'ts_l': self.local_time(), 
             'schem': self.schema, 'ver': self.version, 'wake': self.wake_time, 'cyc': self.cycle_cnt, 'err': self.err, 
-            'rssi': self.get_rssi(), 'bat': self.bat.get_voltage(), 'lvl': self.lvl.get_lvl(), 'temp': int(self.mpl.get_tempf())})
+            'rssi': self.rssi, 'bat': self.bat.get_voltage(), 'lvl': self.lvl.get_lvl(), 'temp': int(self.mpl.get_tempf())})
 
         return payload
     
@@ -466,16 +466,72 @@ class LogiConnect:
     
     def get_rssi(self):
         try: 
-            rssi = cloud.network.signal_strength
-            print("Signal Strength: " + rssi)
+            rssi = self.cloud.network.signal_strength
+        
         except:
             logging.error('ERR117: Error getting RSSI values')
             rssi = 'err'
             self.err = self.err + 'E117; '
 
-        return rssi
+        rssi_float = float(rssi.replace(',','.'))
+        logging.info('--> Signal Strength: ' + str(rssi_float))
+        return rssi_float
     
     def set_local_time(self, zone):
         os.environ['TZ'] = zone
         time.tzset()
     
+    def disconnect(self):
+
+        self.cloud.network.disconnect()
+
+    def publish_mqtt_test(self, JSONpayload, myAWSIoTMQTTClient):
+        '''
+        Function: handles publishing message to MQTT broker
+        '''
+        try:
+            topic = 'logi/test'
+            logging.info('Topic: %s', topic)
+            logging.info('Published Message: %s', JSONpayload)
+            myAWSIoTMQTTClient.publish(topic, JSONpayload, 1)    
+
+        except publishTimeoutException:
+            logging.error('ERR127: Publish Timeout Exception')
+            self.err = self.err + 'E127; '
+            raise
+
+        except:
+            logging.error('ERR139: MQTT publish error')
+            self.err = self.err + 'E139; '
+            raise
+
+class ConnectMQTTParams:
+
+    def __init__(self):
+        
+        name_file = open("/home/debian/Desktop/keys/thingName.txt", "r")
+        self.name = name_file.readline()
+        serial_file = open("/home/debian/Desktop/keys/serial.txt", "r")
+        self.serial = serial_file.readline()
+        self.thingName = self.name
+        self.mqttClientId = self.name
+        self.serial = self.serial
+        self.host = "a28v8anidrrkyj-ats.iot.us-east-2.amazonaws.com"
+        self.rootCAPath = "/home/debian/Desktop/keys/root-CA.crt"
+        self.certificatePath = "/home/debian/Desktop/keys/" + self.name + ".cert.pem"
+        self.privateKeyPath = "/home/debian/Desktop/keys/" + self.name + ".private.key"
+        self.port = 8883
+        name_file.close()
+        serial_file.close()
+        
+class CallbackContainer(object):
+
+    def __init__(self, client):
+        self._client = client
+
+    def messagePrint(self, client, userdata, message):
+        print("Received a new message: ")
+        print(message.payload)
+        print("from topic: ")
+        print(message.topic)
+        print("--------------\n\n")
