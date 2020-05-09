@@ -34,7 +34,7 @@ from psutil import NoSuchProcess
 import ntplib
 from PWR import Battery
 
-### LogiConnect v1.5 ###
+### LogiConnect v1.6 ###
  
 class LogiConnect:
 
@@ -47,7 +47,7 @@ class LogiConnect:
         self.schema = '1.4'
         self.err = ''
         self.cycle_cnt = 1
-        self.version = '1.5'
+        self.version = '1.6'
         self.schedule = self.get_schedule()
         self.wake_time = self.get_wake_time()
         self.set_board_io()
@@ -466,7 +466,8 @@ class LogiConnect:
     
     def get_rssi(self):
         try: 
-            rssi = str(cloud.network.modem.signal_strength)
+            rssi = cloud.network.signal_strength
+            print("Signal Strength: " + rssi)
         except:
             logging.error('ERR117: Error getting RSSI values')
             rssi = 'err'

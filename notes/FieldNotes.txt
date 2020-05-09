@@ -16,3 +16,11 @@ Date: 4/30/20
         - Logi connected properly and did not show any signs of software problems or runtime issues
         - The USB Nova dongle was turning on and off sporadically, indicating that it was somehow damaged -- will be investigating.
         - The error mode can be found in the logs under Logi29 - 4.30.20
+
+Date: 5/8/20
+    Task: Logi Retrieval from the Field after 20+ Days
+    Notes: 
+        - No visible issues related to the devices running into an error    
+        - Suspect the primary source of lost signal is due to running out of battery
+        - Traces of water found inside the enclosure, suspect water vapor condensation
+        

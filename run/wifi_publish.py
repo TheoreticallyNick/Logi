@@ -1,4 +1,4 @@
-from LogiConnect import LogiConnect
+from logi_connect import LogiConnect
 import logging
 import time
 

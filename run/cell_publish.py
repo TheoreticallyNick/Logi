@@ -1,5 +1,5 @@
 #!/bin/bash
-from LogiConnect import LogiConnect
+from logi_connect import LogiConnect
 import logging
 
 ### Create LogiConnect Object
