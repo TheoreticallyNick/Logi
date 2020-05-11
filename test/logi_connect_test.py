@@ -10,7 +10,7 @@ class LogiConnectTest(unittest.TestCase):
         self.logi.create_cloud()
 
     def test_get_rssi(self):
-        self.assertTrue(type(self.logi.get_rssi()) is float)
+        self.assertTrue(type(self.logi.get_rssi()) is str)
     
     #def tearDownClass()
         #self.logi.cell_disconnect()

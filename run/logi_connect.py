@@ -473,9 +473,9 @@ class LogiConnect:
             rssi = 'err'
             self.err = self.err + 'E117; '
 
-        rssi_float = float(rssi.replace(',','.'))
-        logging.info('--> Signal Strength: ' + str(rssi_float))
-        return rssi_float
+        #rssi_float = float(rssi.replace(',','.'))
+        logging.info('--> Signal Strength: ' + rssi)
+        return rssi
     
     def set_local_time(self, zone):
         os.environ['TZ'] = zone
