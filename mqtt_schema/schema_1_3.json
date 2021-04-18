@@ -1,0 +1,15 @@
+//Live//
+{
+    "id": "device id - logi15",
+    "ts": "unix timestamp", 
+    "ts_l": "local timestamp yyyy-MM-dd HH:mm:ss", 
+    "schem": "mqtt schema version",
+    "ver": "software version",
+    "wake": "next wake up time in seconds", 
+    "cyc": "mqtt cycles completed", 
+    "err": "errors", 
+    "rssi": "rssi value",
+    "bat": "battery level", 
+    "lvl": "lvl", 
+    "temp": "temperature in C" 
+}

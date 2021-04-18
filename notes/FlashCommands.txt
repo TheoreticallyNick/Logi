@@ -1,0 +1,36 @@
+### Installing Python3.7 ###
+sudo apt-get update && apt-get remove python3
+rm -r /usr/bin/python3*
+rm -r /usr/local/lib/python3*
+rm -r /usr/lib/python3*
+sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget
+curl -O https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tar.xz
+tar -xf Python-3.7.3.tar.xz
+cd Python-3.7.3
+./configure
+make
+make install
+
+### Dependencies ###
+python3 -m pip install smbus pyserial serial Adafruit_BBIO AWSIoTPythonSDK hologram-python xmodem ntplib datetime
+
+### RTC Wake ###
+sudo apt-get install ntp
+sudo timedatectl set-timezone America/Detroit
+sudo nano /boot/uEnv.txt
+> ###enable_uboot_cape_universal=1
+
+### Update Nova Firmware
+git clone https://github.com/hologram-io/hologram-tools.git
+cd hologram-tools/novaupdate/
+sudo nano nova410update.py
+> change 'raw_input' to 'input'
+sudo python3 nova410update.py
+
+<<<<<<< HEAD
+### Stop NTP 
+sudo service ntp stop
+=======
+### Disable NTP 
+>>>>>>> updates
+sudo update-rc.d -f ntp remove

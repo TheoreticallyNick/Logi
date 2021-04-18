@@ -1,0 +1,39 @@
+DEVICE DEPLOYEMENT NOTES
+
+Date: 4/7/20
+    Task: Retrieve and assess deployed devices from the field
+    Notes: 
+        - Logi15 was found to have a build up of water in the bottom of the enclosure, by the batteries
+        - It has been determined that it is best to start the device from home and deploy without
+            opening the enclosure
+        - Batteries last surprisingly long, over three weeks with the current setup, much longer than anticipated
+        - Logi31 did not have any water intrusion and was fully sealed when found
+
+Date: 4/30/20
+    Task: Logi29 Not Sending Messages for Over Three Days
+    Notes: 
+        - Internally, everything was intact
+        - Logi connected properly and did not show any signs of software problems or runtime issues
+        - The USB Nova dongle was turning on and off sporadically, indicating that it was somehow damaged -- will be investigating.
+        - The error mode can be found in the logs under Logi29 - 4.30.20
+
+Date: 5/8/20
+    Task: Logi Retrieval from the Field after 20+ Days
+    Notes: 
+        - No visible issues related to the devices running into an error    
+        - Suspect the primary source of lost signal is due to running out of battery
+        - Traces of water found inside the enclosure, suspect water vapor condensation
+<<<<<<< HEAD
+        
+=======
+        
+Date: 5/29/20
+    Task: Logi Retrieval from Field
+    Notes:
+        - Logi29 lost contact after 3 days, multiple ERR121, suspect not enough power to power the dongle effectively.
+        - Logi31 lost power after 11 pings
+        - Logi15 lost power after 15 pings.
+    Resolution: 
+        - Ensuring full charge before deployement
+        - Design out the WACO clips - go direct for a hard solder.
+>>>>>>> updates

@@ -1,0 +1,15 @@
+{
+    "reported": {
+      "cust": "TBD",
+      "cust_id": "1",
+      "loc_lat": "42.3314",
+      "loc_long": "-83.0458",
+      "last_fill": "2020-01-01",
+      "last_bat": "2020-01-01",
+      "tank_size": 500,
+      "shadow_ver": 1.4,
+      "user": "Nicolas Theoret",
+      "address": "76 W. Adams Ave, Detroit, MI 48226",
+      "next_fill": "2020-06-01"
+    }
+  }
